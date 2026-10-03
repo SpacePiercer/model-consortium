@@ -2,7 +2,7 @@
  * Prompt Colosseum — arena renderer
  * Draws the PS1-style colosseum into a 320x180 canvas (scale it up with
  * `image-rendering: pixelated`). Low-poly stands, cardboard-cutout crowd,
- * pixel-art emperors in the imperial lodge, gladiators at typewriters,
+ * the four cut-out emperors (emperors.js) in a Red Room lodge, gladiators at typewriters,
  * then an ordered-dither colour crush.
  *
  * Usage:
@@ -12,7 +12,7 @@
  *     typing: 'p1',            // battle: who is typing ('p1' | 'p2' | 'both' | null)
  *     loser: null,             // verdict: 'p1' | 'p2'
  *     votes: null,             // verdict: per emperor 'p1' | 'p2' | 'tie'
- *     seated: [1, 1, 1, 1],    // which emperors are in the lodge
+ *     seated: [1, 1, 1, 1],    // unused: the four emperors are one cut-out image
  *     hype: 0,                 // 0..1 crowd excitement
  *     depth: 4,                // colour bits per channel after dithering (2..6)
  *     tv: tvCanvasEl,          // optional 144x108 canvas for the CRT
@@ -74,36 +74,52 @@
     var s = 99;
     var rnd = function () { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
     var pick = function (a) { return a[Math.floor(rnd() * a.length)]; };
-    var shirts = ['#C9B48A', '#A84A2C', '#6B3A6E', '#3F5F7A', '#D8D0C0', '#7E8C3A', '#B8892E', '#8A2A2A', '#E2C9A0', '#4E6E58', '#C2603A', '#5A4A8A'];
+    var robes = ['#D8CCB0', '#C9B48A', '#E8E0CC', '#8A2A2A', '#B8892E', '#7E6A4E', '#6B3A6E', '#4E5A3A', '#A84A2C', '#BFB49A'];
+    var hides = [['#7A5232', '#4E321C', '#A47A52'], ['#5E3E24', '#3A2414', '#86603E'], ['#8E8A86', '#5E5A58', '#C2BEB8'], ['#9A7048', '#6A4A2C', '#C49A6A']];
     var skins = ['#E0B48C', '#C08A60', '#8E5A3A', '#5E3A26', '#F0C8A0', '#B07850'];
     var hairs = ['#1a120c', '#3a2416', '#6a4a2a', '#C9B48A', '#2a2a2a', '#8a2a1a', '#D8D4C8'];
-    var pants = ['#2a1f15', '#4a3a2a', '#3a2a3a', '#5a4a3a'];
     var flags = ['#C0202A', '#E0B040', '#6B2070', '#EDE6D6', '#2A5A8A'];
     A.sprites = [];
-    for (var v = 0; v < 18; v++) {
-      var sh = pick(shirts), sk = pick(skins), hr = pick(hairs), pn = pick(pants), fl = pick(flags);
-      var hasFlag = rnd() < 0.2, stripe = rnd() < 0.3, frames = [];
+    for (var v = 0; v < 24; v++) {
+      var sk = pick(skins), hr = pick(hairs), fl = pick(flags);
+      var kind = rnd() < 0.3 ? 'hide' : rnd() < 0.5 ? 'robe' : 'tunic';
+      var hd = pick(hides), cl = kind === 'hide' ? hd[0] : pick(robes);
+      var hood = kind === 'robe' && rnd() < 0.3, hasFlag = rnd() < 0.2, frames = [];
       for (var fr = 0; fr < 2; fr++) {
         var c = mk(7, 13), x = c.getContext('2d');
         var px = (function (xc) { return function (col, xx, yy) { xc.fillStyle = col; xc.fillRect(xx, yy, 1, 1); }; })(x);
-        px(hr, 3, 3); px(hr, 4, 3);
+        px(hood ? cl : hr, 3, 3); px(hood ? cl : hr, 4, 3);
         px(sk, 3, 4); px(sk, 4, 4); px(sk, 3, 5); px(sk, 4, 5);
-        for (var yy = 6; yy <= 9; yy++) for (var xx = 2; xx <= 5; xx++) px(sh, xx, yy);
-        if (stripe) for (var xs = 2; xs <= 5; xs++) px('#EDE6D6', xs, 7);
-        for (var yl = 10; yl <= 12; yl++) for (var xl = 2; xl <= 5; xl++) px(pn, xl, yl);
+        if (hood) { px(cl, 2, 4); px(cl, 5, 4); }
+        if (kind === 'robe') {
+          // ankle-length robe, darker fold down the middle
+          for (var yr = 6; yr <= 12; yr++) for (var xr = 2; xr <= 5; xr++) px(cl, xr, yr);
+          for (var yf = 8; yf <= 12; yf++) px('rgba(0,0,0,0.25)', 3, yf);
+        } else if (kind === 'tunic') {
+          // knee-length tunic, rope belt, bare legs
+          for (var yt = 6; yt <= 10; yt++) for (var xt = 2; xt <= 5; xt++) px(cl, xt, yt);
+          for (var xb = 2; xb <= 5; xb++) px('#4a3020', xb, 8);
+          px(sk, 2, 11); px(sk, 5, 11); px('#3a2414', 2, 12); px('#3a2414', 5, 12);
+        } else {
+          // pelt over one shoulder, mottled, the other shoulder bare
+          for (var yh = 6; yh <= 10; yh++) for (var xh = 2; xh <= 5; xh++) px((xh + yh) % 3 ? hd[0] : hd[(xh * yh) % 2 ? 1 : 2], xh, yh);
+          px(sk, 5, 6); px(hd[1], 2, 10); px(hd[1], 4, 10);
+          px(sk, 2, 11); px(sk, 5, 11); px('#3a2414', 2, 12); px('#3a2414', 5, 12);
+        }
+        var arm = kind === 'robe' ? cl : sk;
         if (hasFlag) {
           for (var yp = 0; yp <= 9; yp++) px('#4a3020', 0, yp);
           var fy = fr ? 1 : 0;
           px(fl, 1, fy); px(fl, 2, fy); px(fl, 1, fy + 1); px(fl, 2, fy + 1); px(fl, 1, fy + 2);
-          px(sk, 1, 6); px(sh, 1, 7);
-          if (fr) { px(sk, 6, 3); px(sk, 6, 4); px(sh, 6, 5); px(sh, 6, 6); }
-          else { px(sh, 6, 6); px(sh, 6, 7); px(sk, 6, 8); }
+          px(sk, 1, 6); px(arm, 1, 7);
+          if (fr) { px(sk, 6, 3); px(sk, 6, 4); px(arm, 6, 5); px(arm, 6, 6); }
+          else { px(arm, 6, 6); px(arm, 6, 7); px(sk, 6, 8); }
         } else if (fr) {
-          px(sk, 1, 3); px(sk, 1, 4); px(sh, 1, 5); px(sh, 1, 6);
-          px(sk, 6, 3); px(sk, 6, 4); px(sh, 6, 5); px(sh, 6, 6);
+          px(sk, 1, 3); px(sk, 1, 4); px(arm, 1, 5); px(arm, 1, 6);
+          px(sk, 6, 3); px(sk, 6, 4); px(arm, 6, 5); px(arm, 6, 6);
         } else {
-          px(sh, 1, 6); px(sh, 1, 7); px(sk, 1, 8);
-          px(sh, 6, 6); px(sh, 6, 7); px(sk, 6, 8);
+          px(arm, 1, 6); px(arm, 1, 7); px(sk, 1, 8);
+          px(arm, 6, 6); px(arm, 6, 7); px(sk, 6, 8);
         }
         frames.push(c);
       }
@@ -116,46 +132,82 @@
     A.blood = [];
     for (var b = 0; b < 16; b++) A.blood.push({ vx: 10 + rnd() * 26, vy: -(12 + rnd() * 24), d: rnd() * 0.3 });
 
-    var base = [
-      '..tTTTTTTTTTt..',
-      '.tTgGGGGGGGgTt.',
-      '.tTGHHHHHHHGTt.',
-      '.tTHSSSSSSSHTt.',
-      '.tTSKESSSKESTt.',
-      '.tTSSSSsSSSSTt.',
-      '.tTsSSSSSSSsTt.',
-      '.tTtsSKKKSstTt.',
-      '.tTttsSSSsttTt.',
-      '.tTWWWsSsWWWTt.',
-      '.tWWWWRWWWWWWt.',
-      'tWWWWWWRWWWWWWt',
-      'tWWwWWWWRWWwWWt',
-      'tSWwWWWWWRWwWSt',
-      'tSWwWWWWWWRwWSt',
-      'TTWwWWWWWWWwWTT',
-      'TTWWWWWWWWWWWTT',
-      'tTWWWWWWWWWWWTt',
-      'tTpWWWWWWWWWpTt',
-      'tTTTTTTTTTTTTTt'
-    ];
-    var over = function (rows) { var r = base.slice(); for (var k in rows) r[k] = rows[k]; return r; };
-    A.common = { t: '#3a2a10', T: '#8a6a24', K: '#140a08', p: '#3a1240', Y: '#F0C850' };
+    // Sleeve and hand colours for the vote arms, left to right (Amodei, Altman, Zuckerberg, Musk).
     A.emps = [
-      { cx: 113.5, eye: [111, 211, 255], ph: 0.4,
-        rows: over({ 1: '.tTHYYYYYYYHTt.', 5: '.tTHSSSsSSSHTt.', 6: '.tTHsSSSSSsHTt.', 7: '.tTHsSKKKSsHTt.', 8: '.tTHtsSSSstHTt.' }),
-        pal: { S: '#E2B48E', s: '#B4835E', H: '#2a1610', G: '#D9A93A', g: '#8a6a24', W: '#6B2470', w: '#3A1240', R: '#E0B040' } },
-      { cx: 144.5, eye: [255, 177, 59], ph: 2.1,
-        rows: over({ 2: '.tTGSSSSSSSGTt.', 3: '.tTSSSSSSSSSTt.', 6: '.tTHSSSSSSSHTt.', 7: '.tTHHSKKKSHHTt.', 8: '.tTtHHHHHHHtTt.' }),
-        pal: { S: '#C99070', s: '#8E5A3A', H: '#2a1a10', G: '#6E8F2E', g: '#3E5A1C', W: '#D8D0C0', w: '#A39A88', R: '#A3201A' } },
-      { cx: 175.5, eye: [183, 140, 255], ph: 3.3,
-        rows: over({ 1: '.tTVVVVVVVVVTt.', 2: '.tTVHHHHHHHVTt.', 3: '.tTVSSSSSSSVTt.', 4: '.tTVKESSSKEVTt.', 5: '.tTVSSSsSSSVTt.', 6: '.tTVsSSSSSsVTt.', 7: '.tTVsSKKKSsVTt.', 8: '.tTVVsSSSsVVTt.' }),
-        pal: { S: '#D6A07A', s: '#9A6A4A', H: '#1a1010', V: '#2E3E6A', W: '#22305A', w: '#141E3A', R: '#B8892E' } },
-      { cx: 206.5, eye: [242, 238, 220], ph: 4.6,
-        rows: over({ 5: '.tTHSsSsSsSHTt.', 6: '.tTHsSSSSSsHTt.' }),
-        pal: { S: '#D8B494', s: '#A07E62', H: '#E8E4D8', G: '#D9A93A', g: '#8a6a24', W: '#D8D0C0', w: '#A39A88', R: '#6B2470' } }
+      { sleeve: '#E8E0D0', arm: '#C9946E' },
+      { sleeve: '#7A5236', arm: '#F0C4A8' },
+      { sleeve: '#9A9894', arm: '#EEC8B0' },
+      { sleeve: '#3A2230', arm: '#E6BC9C' }
     ];
     ASSETS = A;
     return A;
+  }
+
+  // ---- emperors ----
+  // One cut-out group from emperors.js, standing on the box ledge, centred on the lodge.
+  // To sit in the arena it gets an ink outline, a drop shadow on the curtain, torchlight from
+  // the left, a contact shadow at the ledge and the arena's ordered dither.
+  var GROUP_CX = 160, PAD = 6;
+
+  function tone(hex, k) {
+    var n = parseInt(hex.slice(1), 16);
+    return 'rgb(' + Math.min(255, Math.round((n >> 16 & 255) * k)) + ',' + Math.min(255, Math.round((n >> 8 & 255) * k)) + ',' + Math.min(255, Math.round((n & 255) * k)) + ')';
+  }
+
+  function emperorBox(parTop) {
+    var d = root.EMPERORS, t = d.texel;
+    var x0 = GROUP_CX - d.w / t / 2 - PAD / t;
+    return { x0: x0, y0: parTop - (d.h + PAD) / t, w: d.w + PAD * 2, h: d.h + PAD, t: t };
+  }
+
+  function drawEmperors(ov, img, o) {
+    var A = assets(), d = root.EMPERORS;
+    var ctx = ov.getContext('2d', { willReadFrequently: true });
+    if (!ctx || !d) return;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0, 0, ov.width, ov.height);
+    if (!img || !img.complete || !img.naturalWidth) return;
+    ctx.imageSmoothingEnabled = false;
+    var gx = PAD, gy = PAD, W2 = ov.width, H2 = ov.height;
+
+    var sil = document.createElement('canvas'); sil.width = W2; sil.height = H2;
+    var sc = sil.getContext('2d');
+    var silhouette = function (col) {
+      sc.globalCompositeOperation = 'source-over'; sc.clearRect(0, 0, W2, H2);
+      sc.drawImage(img, gx, gy);
+      sc.globalCompositeOperation = 'source-in'; sc.fillStyle = col; sc.fillRect(0, 0, W2, H2);
+      return sil;
+    };
+    ctx.globalAlpha = 0.5; ctx.drawImage(silhouette('#0a0002'), 4, 3); ctx.globalAlpha = 1;   // shadow on the curtain
+    silhouette('#140806');
+    [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(function (q) { ctx.drawImage(sil, q[0], q[1]); });   // ink outline
+    ctx.drawImage(img, gx, gy);
+
+    ctx.globalCompositeOperation = 'source-atop';
+    var g = ctx.createLinearGradient(0, 0, W2, 0);
+    g.addColorStop(0, 'rgba(255,170,90,0.22)'); g.addColorStop(0.45, 'rgba(255,170,90,0)');
+    g.addColorStop(0.7, 'rgba(40,0,10,0)'); g.addColorStop(1, 'rgba(40,0,10,0.3)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W2, H2);
+    g = ctx.createLinearGradient(0, H2 * 0.7, 0, H2);
+    g.addColorStop(0, 'rgba(12,2,2,0)'); g.addColorStop(1, 'rgba(12,2,2,0.6)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W2, H2);
+    ctx.globalCompositeOperation = 'source-over';
+
+    if (o.votes) {
+      // a small thumbs-up beside each head, on the favoured gladiator's side (texel units)
+      A.emps.forEach(function (e, ei) {
+        var v = o.votes[ei];
+        if (v !== 'p1' && v !== 'p2') return;
+        var s2 = v === 'p1' ? -1 : 1, x = Math.round(gx + d.faces[ei] + s2 * 16) - 4, y = Math.round(H2 * 0.5);
+        var R = function (x1, y1, w, h, col) { ctx.fillStyle = col; ctx.fillRect(x1, y1, w, h); };
+        R(x - 1, y - 1, 10, 9, '#140806'); R(x + 1, y - 7, 4, 7, '#140806');      // outline
+        R(x, y, 8, 7, e.arm); R(x + 2, y - 6, 2, 6, tone(e.arm, 1.12));          // fist, thumb
+        R(x, y + 2, 8, 1, tone(e.arm, 0.75)); R(x, y + 4, 8, 1, tone(e.arm, 0.75));
+        R(x - 1, y + 7, 10, 3, '#140806'); R(x, y + 7, 8, 2, e.sleeve);          // cuff
+      });
+    }
+    if (!A.empNoise || A.empNoise.length !== W2 * H2) A.empNoise = noiseField(W2, H2, 20, 4242);
+    dither(ctx, W2, H2, Math.max(2, Math.min(6, Math.round(o.depth || 4))), A.empNoise, null, 0);
   }
 
   function paintOffering(c) {
@@ -354,51 +406,33 @@
 
     // ---- imperial lodge ----
     var bx = 5.5, zF = -7.6, zB = -8.9;
-    fill([P(-bx, 1.6, zB), P(bx, 1.6, zB), P(bx, 6.0, zB), P(-bx, 6.0, zB)], 'rgb(74,18,58)');
-    ctx.fillStyle = 'rgba(30,6,24,0.6)';
+    fill([P(-bx, 1.6, zB), P(bx, 1.6, zB), P(bx, 6.0, zB), P(-bx, 6.0, zB)], 'rgb(128,12,16)');
+    ctx.fillStyle = 'rgba(40,0,6,0.55)';
     for (var fx = -bx + 0.45; fx < bx; fx += 0.9) {
       var f0 = P(fx, 6.0, zB), f1 = P(fx + 0.14, 1.6, zB);
       ctx.fillRect(Math.round(f0[0]), Math.round(f0[1]), Math.max(1, Math.round(f1[0] - f0[0])), Math.round(f1[1] - f0[1]));
     }
-    fill([P(-bx, 1.6, zF), P(-bx, 1.6, zB), P(-bx, 6.0, zB), P(-bx, 6.0, zF)], 'rgb(56,14,44)');
-    fill([P(bx, 1.6, zF), P(bx, 1.6, zB), P(bx, 6.0, zB), P(bx, 6.0, zF)], 'rgb(56,14,44)');
+    fill([P(-bx, 1.6, zF), P(-bx, 1.6, zB), P(-bx, 6.0, zB), P(-bx, 6.0, zF)], 'rgb(90,8,12)');
+    fill([P(bx, 1.6, zF), P(bx, 1.6, zB), P(bx, 6.0, zB), P(bx, 6.0, zF)], 'rgb(90,8,12)');
 
     var parTop = Math.round(P(0, 2.5, zF)[1]);
-    var seated = o.seated || [1, 1, 1, 1];
-    A.emps.forEach(function (e, ei) {
-      var present = !!seated[ei];
-      var lean = present && Math.sin(T * 0.6 + e.ph) > 0.9 ? (e.ph > 3 ? 1 : -1) : 0;
-      var left = Math.round(e.cx - 15) + lean, top = parTop - 30;
-      var blink = Math.sin(T * 0.85 + e.ph * 3) > 0.975;
-      var rows = e.rows;
-      for (var r = 0; r < rows.length; r++) {
-        var row = rows[r];
-        for (var q = 0; q < row.length; q++) {
-          var ch = row[q];
-          if (ch === '.') continue;
-          if (!present && ch !== 't' && ch !== 'T') continue;
-          var col;
-          if (ch === 'E') col = blink ? e.pal.S : 'rgb(' + e.eye.join(',') + ')';
-          else col = e.pal[ch] || A.common[ch] || '#ff00ff';
-          ctx.fillStyle = col;
-          ctx.fillRect(left + q * 2, top + r * 2, 2, 2);
-          if (ch === 'E' && !blink) eyes.push([left + q * 2 + 1, top + r * 2 + 1, e.eye, 5]);
-        }
-      }
-      var vote = o.votes ? o.votes[ei] : null;
-      if (present && (vote === 'p1' || vote === 'p2')) {
-        var c0 = vote === 'p1' ? 0 : 12;
-        var pxs = function (cc, rr, col) { ctx.fillStyle = col; ctx.fillRect(left + cc * 2, top + rr * 2, 2, 2); };
-        for (var ar = 1; ar <= 9; ar++) { pxs(c0, ar, e.pal.w); pxs(c0 + 1, ar, e.pal.W); }
-        for (var fc = 0; fc < 3; fc++) { pxs(c0 + fc, -1, e.pal.S); pxs(c0 + fc, 0, e.pal.S); }
-        pxs(c0 + 1, -2, e.pal.S); pxs(c0 + 1, -3, e.pal.S);
-        pxs(c0 + 2, 0, e.pal.s);
-      }
-    });
+    A.parTop = parTop;
 
     fill([P(-5.7, 1.6, zF), P(5.7, 1.6, zF), P(5.7, 2.5, zF), P(-5.7, 2.5, zF)], 'rgb(196,178,148)');
     fill([P(-5.8, 2.42, zF + 0.05), P(5.8, 2.42, zF + 0.05), P(5.8, 2.56, zF + 0.05), P(-5.8, 2.56, zF + 0.05)], 'rgb(232,220,196)');
     fill([P(-5.7, 1.6, zF + 0.02), P(5.7, 1.6, zF + 0.02), P(5.7, 1.68, zF + 0.02), P(-5.7, 1.68, zF + 0.02)], 'rgb(120,104,82)');
+    // zigzag Red Room floor on the parapet
+    var pv0 = P(-5.7, 2.5, zF), pv1 = P(5.7, 1.6, zF);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(pv0[0], pv0[1] + 1, pv1[0] - pv0[0], pv1[1] - pv0[1] - 1); ctx.clip();
+    ctx.fillStyle = '#EDE6D6'; ctx.fillRect(pv0[0], pv0[1], pv1[0] - pv0[0], pv1[1] - pv0[1]);
+    ctx.strokeStyle = '#0c0808'; ctx.lineWidth = 1.6;
+    for (var zy = pv0[1] - 4; zy < pv1[1] + 4; zy += 4) {
+      ctx.beginPath();
+      for (var zx = pv0[0]; zx <= pv1[0] + 4; zx += 4) ctx.lineTo(zx, zy + (Math.round((zx - pv0[0]) / 4) % 2 ? 2 : 0));
+      ctx.stroke();
+    }
+    ctx.restore();
     [-5.45, 5.45].forEach(function (cxw) {
       fill([P(cxw - 0.16, 2.5, zF), P(cxw + 0.16, 2.5, zF), P(cxw + 0.16, 6.0, zF), P(cxw - 0.16, 6.0, zF)], 'rgb(214,198,170)');
       fill([P(cxw - 0.26, 5.82, zF), P(cxw + 0.26, 5.82, zF), P(cxw + 0.26, 6.05, zF), P(cxw - 0.26, 6.05, zF)], 'rgb(230,214,180)');
@@ -591,8 +625,21 @@
     paintTv();
     try { draw(canvas, 0, st.o); } catch (e) { st.alive = false; }
     if (st.alive && typeof requestAnimationFrame === 'function') st.raf = requestAnimationFrame(frame);
+
+    var ov = null, img = null;
+    var paintEmperors = function () { if (ov) { try { drawEmperors(ov, img, st.o); } catch (e) { /* ignore */ } } };
+    if (root.EMPERORS && canvas.parentNode && typeof document !== 'undefined') {
+      var A = assets(), k = (canvas.offsetWidth || W) / W, bx = emperorBox(A.parTop);
+      ov = document.createElement('canvas');
+      ov.width = bx.w; ov.height = bx.h;
+      ov.setAttribute('aria-hidden', 'true');
+      ov.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;left:' + (canvas.offsetLeft + bx.x0 * k) + 'px;top:' +
+        (canvas.offsetTop + bx.y0 * k) + 'px;width:' + (bx.w / bx.t * k) + 'px;height:' + (bx.h / bx.t * k) + 'px';
+      canvas.parentNode.insertBefore(ov, canvas.nextSibling);
+      img = new Image(); img.onload = paintEmperors; img.src = root.EMPERORS.src;
+    }
     return {
-      set: function (o) { Object.assign(st.o, o || {}); paintTv(); },
+      set: function (o) { Object.assign(st.o, o || {}); paintTv(); paintEmperors(); },
       stop: function () { st.alive = false; if (st.raf) cancelAnimationFrame(st.raf); st.raf = 0; }
     };
   }

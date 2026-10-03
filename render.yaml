@@ -1,0 +1,30 @@
+# Render blueprint: one web service, one process (rooms live in memory, so never more than one
+# worker). Connect the repo on render.com, choose "Blueprint", then fill in the keys marked
+# sync: false in the dashboard. Add more providers the same way (OPENAI_API_KEY, OPENAI_MODEL ...).
+#
+# The free plan sleeps after ~15 minutes without traffic and the first visit then takes about a
+# minute to wake it: open the site before the demo, and run scripts/smoke.py against it.
+services:
+  - type: web
+    name: prompt-colosseum
+    runtime: python
+    plan: free
+    rootDir: prompt-colosseum
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 1 --threads 100 -b 0.0.0.0:$PORT run:app
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.12
+      - key: JUDGES
+        value: live
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: qwen/qwen3.8-27b

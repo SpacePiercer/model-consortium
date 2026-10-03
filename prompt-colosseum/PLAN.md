@@ -16,8 +16,30 @@ Grenze Gotisch body font, comic-book effects in `design/fx.js` (Latin slams, ris
 lines, shake, "Continvatvr"), a crowd in robes and hides, a Red Room lodge, and the four Emperors
 as one cut-out group of low-poly AI-CEO caricatures (`design/emperors.js`) with vote thumbs,
 in neutral, happy (player won) and mad (player lost) poses.
-**Next:** more pictures (lighthouse, desert, a logo, pixel art) and Pictvra sample cases, and a
-Render account for the deploy.
+All of this is merged into `main` (PR #4, 2026-10-03). The port already covers most of Phases 4–5
+and the client side of reconnect (Phase 6.3); see the (done) marks below.
+
+**Status at a glance**
+
+| Phase | State |
+|---|---|
+| 0 Keys and probe | done (Gemini + Groq) |
+| 1 Screens | done |
+| 2 Rooms, fake judges | done |
+| 3 Real judges | done; bribe check in `judges.py` |
+| 4 Round content | code done; pictures missing (2 of 6), wildcard list not confirmed |
+| 5 Verdict and flow | done, except the persona names |
+| 6 Polish | reconnect done; judging animation basic; sounds and practice mode not started |
+| 7 Deploy | prepared (`render.yaml`, `scripts/smoke.py`); no account yet |
+
+**Next:**
+1. 🙋 Pictures: `lighthouse.jpg`, `desert-dunes.jpg`, `game-logo-01.png`, `pixel-castle.png` are in
+   the Pictvra pool but not in `static/offerings/`, so only the two paintings come up. Grow the
+   pool to 20+.
+2. Pictvra sample cases in `app/prompts/cases/` (ludus, minister and ars have them).
+3. 🙋 Persona names: keep Avgvsta/Brvtvs/Cassia/Decimvs or rename to fit the CEO caricatures.
+4. Phase 6: a real judging animation, then sounds, then practice mode.
+5. 🙋 A Render account, then deploy and run `scripts/smoke.py` against it.
 
 Run it: `python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt`, then
 `.venv/bin/python run.py` and open http://localhost:5001 in two tabs. Tests: `.venv/bin/python -m pytest tests`.
@@ -99,33 +121,36 @@ prototypes pixel for pixel.
 ## Phase 4: Round content and wildcards
 - 🙋 Final round list, task pools and wildcard rules.
 - 🙋 Full picture set.
-- Load the content into `rounds.py`.
-- Show the round title, brief and wildcard rule on screen.
-- Round 5 needs a pick-a-model screen (a row of buttons from `MODELS`) in place of the
-  testimony paper.
-- Dither the pictures on the CRT.
-- Wire the wildcard effects: half time, the offering vanishing, and the extra rules given to the judges.
+- (done) Load the content into `rounds.py`: 5 rounds, 5–8 tasks per text round, 6 pictures listed
+  (4 of the files still missing).
+- (done) Show the round title, brief and wildcard rule on screen.
+- (done) Round 5 pick-a-model screen: model cards in place of the testimony paper.
+- (done) Dither the pictures on the CRT (`ArenaEngine.paintOffering`; the lighthouse stands in if
+  a picture fails to load).
+- (done) Wildcard effects: half time, the offering vanishing (Caecvs), and the extra rules given
+  to the judges.
 
 **Done when:** every round type plays with real content, and a wildcard round shows and enforces its rule.
 
 ## Phase 5: Verdict and match flow
 - 🙋 Veto any rule defaults.
-- The verdict screen shows each Emperor's scores and remark, thumbs in the arena (already drawn
-  by `arena.js` from `votes`), a shaking damage number, HP bars and Victor / Victus stamps.
-  The prototype dropped the per-Emperor score plates, so the scores need a new place on screen.
+- (done) The verdict screen shows each Emperor's scores and remark (the Acta Imperatorum list
+  took the place of the score plates), thumbs and happy/mad moods in the arena, the wound,
+  HP bars and Victor / Victvs / Par stamps.
 - 🙋 The Emperors are now caricatures of Amodei, Altman, Zuckerberg and Musk, but the personas
   (Avgvsta, Brvtvs, Cassia, Decimvs in `judges.py`, `JUDGES.md` and the lobby) still have the
   old names. Rename them or keep them.
-- Both prompts side by side, a context bar under each player, and `/compact` and `/clear`
+- (done) Both prompts side by side, a context bar under each player, and `/compact` and `/clear`
   buttons between rounds.
-- Next round, the match-end screen and Yield.
+- (done) Next round, the match-end screen and a two-click Yield.
 
 **Done when:** a match ends on a winner screen, and Next and Yield both work.
 
 ## Phase 6: Polish (in this order; stop when time runs out)
-1. A judging animation, because the wait is 5–20 s. Build it from `fx.js` (menace glyphs).
-2. Sounds. Screen shake and the slams already exist in `fx.js`; drive them from server events.
-3. Reconnect after a page refresh.
+1. A judging animation, because the wait is 5–20 s. Today it's a "deliberating" note and one
+   burst of speed lines; build the rest from `fx.js` (menace glyphs).
+2. Sounds. (done) Screen shake and the slams are already driven from the server events.
+3. (done) Reconnect after a page refresh: the client saves its token and sends `room:rejoin`.
 4. Practice mode against the Emperors.
 
 ## Phase 7: Deploy and demo

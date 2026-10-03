@@ -130,7 +130,6 @@ ROUNDS = [
 ]
 
 # Options for the choice round. Kinds of model, not product names, so they don't go stale.
-# ponytail: every task shows all options; trim to answer + 3 distractors if it feels too easy.
 MODELS = {
     "reasoning": "Frontier reasoning model",
     "fast": "Small, fast, cheap model",
@@ -190,6 +189,16 @@ def draw(n, used=()):
     rnd = round_for(n)
     fresh = [o for o in rnd["pool"] if o["id"] not in used] or rnd["pool"]
     return rnd, random.choice(fresh)
+
+
+def options(offering, n=4):
+    """The n model cards shown for a choice-round offering: its best fits, padded with random
+    distractors, shuffled. Always contains a top-fit answer."""
+    best = sorted(offering["fit"], key=offering["fit"].get, reverse=True)[:n]
+    rest = [m for m in MODELS if m not in best]
+    cards = best + random.sample(rest, n - len(best))
+    random.shuffle(cards)
+    return cards
 
 
 def score_choice(offering, choice):
@@ -267,12 +276,15 @@ if __name__ == "__main__":
     assert '"checklist": 0-N' in system_prompt(judged[1], "X") and '"checklist"' not in system_prompt(judged[0], "X")
     assert all(k in system_prompt(judged[0], "X") for k in SHARED)
     bike = next(o for o in ROUNDS[-1]["pool"] if o["id"] == "bike")
+    for o in ROUNDS[-1]["pool"]:
+        cards = options(o)
+        assert len(cards) == 4 and len(set(cards)) == 4 and max(o["fit"], key=o["fit"].get) in cards, o["id"]
     assert score_choice(bike, "vision") == 10 and score_choice(bike, "speech") == 0
     for i, rnd in enumerate(ROUNDS, 1):
         _, offering = draw(i)
         print(f"\n===== Round {i}: {rnd['title']} ({rnd['kind']}) =====\n")
         if rnd["kind"] == "choice":
-            print(f"OFFERING: {offering['task']}\nOptions: {', '.join(MODELS.values())}")
+            print(f"OFFERING: {offering['task']}\nOptions: {', '.join(MODELS[m] for m in options(offering))}")
             continue
         print(system_prompt(rnd, "Avgvsta", random.choice(WILDCARDS)))
         print("\n-----\n")

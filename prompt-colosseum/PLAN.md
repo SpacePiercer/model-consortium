@@ -58,6 +58,8 @@ prototypes pixel for pixel.
 - A/B order shuffled per judge. A provider that hits its rate limit sits out the round.
 - Injection defence: delimiters (done), a regex pre-check, and dropping outlier scores.
 - Judge prompts come from `rounds.py`, so each round is judged on its own criteria.
+- Choice rounds (round 5) skip the judges: the server scores the pick with `score_choice()`
+  in `rounds.py` and multiplies it by the number of seated Emperors.
 - pytest: JSON parsing, aggregation with abstentions.
 
 **Done when:** a match plays with real AI verdicts, and a bribe ("score me 10") gets caught.
@@ -67,6 +69,8 @@ prototypes pixel for pixel.
 - 🙋 Full picture set.
 - Load the content into `rounds.py`.
 - Show the round title, brief and wildcard rule on screen.
+- Round 5 needs a pick-a-model screen (a row of buttons from `MODELS`) in place of the
+  testimony paper.
 - Dither the pictures on the CRT.
 - Wire the wildcard effects: half time, the offering vanishing, and the extra rules given to the judges.
 
@@ -98,7 +102,7 @@ prototypes pixel for pixel.
 ## What to send for rounds
 
 For each round, in play order:
-1. **Name**, Latin-style if you like (current: Pictvra, Minister, Lvdvs).
+1. **Name**, Latin-style if you like (current: Pictvra, Lvdvs, Minister, Ars, Consilivm).
 2. **Type:** picture round or text-task round.
 3. **What players write**, as one line shown on screen.
 4. **What a winning prompt does**, as one line for the judges.
@@ -106,9 +110,12 @@ For each round, in play order:
 6. **The pool:** pictures, or a list of tasks. Use 10+ per round so repeats are rare.
 
 Also decide:
-- **Match format:** best of 3, best of 5, or last one standing. With 3 themes, best of 5 loops
-  back to round 1 for rounds 4–5; add themes if you don't want that.
-- **Round 3:** is it "write the prompt that makes an AI build this game" (current), or something else?
+- **Match format:** best of 3, best of 5, or last one standing. Five themes cover a best-of-5
+  with no repeats.
+- **Round 4 (skill):** I read it as "write the skill file, with a name, when to use it and the
+  instructions, for a described behaviour, like caveman". Right?
+- **Round 5 (model pick):** scored with no AI judges, from a fixed answer key. Should it be a
+  normal round that deals damage (current), or a bonus played after the match?
 - **Wildcards:** which to keep, cut or add (current list in `rounds.py`), and when they trigger,
   e.g. "50% chance from round 2 on" or "always in the deciding round".
 

@@ -72,7 +72,7 @@ QUIPS = [
     "The sand drinks the blood of the vague.",
     "A fair attempt, but the crowd yawns.",
     "Precision, at last. Rome approves.",
-    "Even in likeness. Even in craft.",
+    "Even in likeness. Even in clarity.",
 ]
 
 # Phrases aimed at the judge. "you are now" and "system prompt" are left out on purpose: the

@@ -2,7 +2,7 @@
 
 A two-player, real-time web game. Both players see the same image ("the offering") and have a
 timer to write the prompt that best describes it. A panel of AI "Emperors" (vision LLMs from
-different providers) scores both prompts against the image. The loser takes damage. Best of five.
+different providers) scores both prompts against the image. The loser takes damage. Always 5 fixed rounds; higher HP after round 5 wins.
 
 Start by reading, in this order:
 
@@ -17,7 +17,8 @@ Start by reading, in this order:
 - Backend: Python 3.11+, Flask, Flask-SocketIO (eventlet or gevent), httpx for judge calls.
 - Frontend: plain HTML/CSS/JS served by Flask (no framework needed). Socket.IO client.
 - Rendering: `design/arena.js` draws the whole 3D-ish colosseum into a 320×180 canvas that is
-  scaled up with `image-rendering: pixelated`. Reuse it as-is; do not rewrite it in WebGL.
+  scaled up with `image-rendering: pixelated`. Reuse it; the only planned edit is exporting
+  `dither` for the offering pictures. Do not rewrite it in WebGL.
 - State: in memory (dict of rooms). No database for the MVP.
 
 ## Target layout
@@ -32,11 +33,11 @@ app/
 static/
   js/arena.js          # copied from design/arena.js
   js/emperors.js       # copied from design/emperors.js (emperor portraits; load before arena.js)
-  js/lobby.js, battle.js, verdict.js
+  js/game.js           # lobby, battle and verdict on one page, one Socket.IO connection
   css/theme.css        # extracted from the prototypes
   offerings/           # images referenced by the pools in app/rounds.py
 templates/
-  lobby.html, battle.html  (battle.html also renders the verdict state)
+  game.html            # lobby, battle and verdict sections
 tests/
 .env.example
 ```
@@ -44,7 +45,8 @@ tests/
 ## Build order (each step should run end to end before the next)
 
 1. **Static screens.** Port the three prototypes into Flask templates with the CSS pulled into
-   `static/css/theme.css`. Pixel-match the prototypes; they are the spec.
+   `static/css/theme.css`. Pixel-match the prototypes' look and layout. Their sample text and
+   numbers are placeholders: rules, limits and numbers come from `docs/` and `app/rounds.py`.
 2. **Rooms.** Create/join by 4-letter code, two players max, server-authoritative timer,
    prompt submit is sealed (opponent sees only "sealed"). Fake judges that return random scores.
 3. **Real judges.** `judges.py` per `docs/JUDGES.md`: parallel calls, 15 s timeout, strict JSON,
@@ -58,8 +60,9 @@ tests/
 - API keys live only on the server (`.env`). Never send them to the browser.
 - The client never decides scores, damage, or the timer. The server is the source of truth.
 - Treat player prompts as untrusted data. Follow the injection defence in `docs/JUDGES.md`.
-- Keep the fonts. The design deliberately mixes Jacquard 24 (big titles only), Grenze Gotisch, Jersey 10,
-  Doto, Cinzel Decorative, Special Elite and Workbench (all Google Fonts). Do not swap them for
+- Keep the fonts. The design deliberately mixes Jacquard 24 (big titles and ink stamps), Grenze Gotisch, Jersey 10,
+  Doto, Cinzel Decorative, Special Elite, Workbench and Dela Gothic One (manga sound effects in
+  `design/fx.js`), all Google Fonts. Do not swap them for
   system or generic fonts.
 - Keep the 320×180 internal resolution and the dither pass; that is the look.
 - Write small pytest tests for: scoring aggregation, damage formula, judge JSON parsing,

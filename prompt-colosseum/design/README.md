@@ -48,6 +48,7 @@ real game draw the actual offering image into it (nearest-neighbour downscale) a
 | Cinzel Decorative | Emperor names |
 | Special Elite | Typed testimonies, paper labels |
 | Workbench | Model names, CRT captions |
+| Dela Gothic One | Manga-style sound effects (`fx.js`) |
 
 ## Palette
 

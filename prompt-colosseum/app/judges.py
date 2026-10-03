@@ -106,6 +106,7 @@ class Judge:
     api_key: str = ""
     timeout: float = 15.0
     extra: dict = field(default_factory=dict)
+    max_tokens: int = 400  # providers count this against per-minute limits, so keep it small
     rng: object = None  # fake judges only
 
     @property
@@ -134,6 +135,9 @@ def _live_judges():
         if not (key and model):
             continue
         extra = {}
+        tokens = 400
+        if name == "gemini":  # thinking spends max_tokens before the answer, so it needs headroom
+            extra, tokens = {"reasoning_effort": "low"}, 2048  # ponytail: "low" is fast enough
         if name == "cloudflare":
             if not os.getenv("CF_ACCOUNT_ID"):
                 continue
@@ -143,7 +147,7 @@ def _live_judges():
             model = models[0]
             if len(models) > 1:
                 extra = {"models": models}
-        out.append(Judge(name, model, url, key, float(os.getenv("JUDGE_TIMEOUT_S", "15")), extra))
+        out.append(Judge(name, model, url, key, float(os.getenv("JUDGE_TIMEOUT_S", "15")), extra, tokens))
     if os.getenv("OLLAMA_MODEL"):
         out.append(Judge("ollama", os.getenv("OLLAMA_MODEL"), "http://localhost:11434/v1", "ollama",
                          float(os.getenv("OLLAMA_TIMEOUT_S", "90"))))
@@ -185,7 +189,7 @@ def _chat(judge, messages, json_mode):
     if time.monotonic() < _cool.get(judge.provider, 0):
         raise RateLimited("cooling down after a rate limit")
     body = {"model": judge.model, "messages": messages, "temperature": 0.2,
-            "max_tokens": int(os.getenv("JUDGE_MAX_TOKENS", "400")), **judge.extra}
+            "max_tokens": int(os.getenv("JUDGE_MAX_TOKENS") or judge.max_tokens), **judge.extra}
     if json_mode:
         body["response_format"] = {"type": "json_object"}
     r = httpx.post(judge.base_url + "/chat/completions", json=body, timeout=judge.timeout,
@@ -196,10 +200,13 @@ def _chat(judge, messages, json_mode):
         except ValueError:
             wait_s = 60
         _cool[judge.provider] = time.monotonic() + min(wait_s, 120)
-        raise RateLimited("HTTP 429")
+        raise RateLimited("HTTP 429: " + r.text[:160].replace("\n", " "))
     if r.status_code >= 400:
         raise JudgeError("HTTP %d: %s" % (r.status_code, r.text[:200]))
-    return r.json()["choices"][0]["message"]["content"]
+    choice = r.json()["choices"][0]
+    if choice.get("finish_reason") == "length":  # thinking models spend max_tokens before answering
+        raise JudgeError("reply cut off at max_tokens; raise it (JUDGE_MAX_TOKENS in .env overrides)")
+    return choice["message"]["content"]
 
 
 def _ask(judge, system, content):

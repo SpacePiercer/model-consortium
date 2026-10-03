@@ -57,7 +57,7 @@ tests/
 - API keys live only on the server (`.env`). Never send them to the browser.
 - The client never decides scores, damage, or the timer. The server is the source of truth.
 - Treat player prompts as untrusted data. Follow the injection defence in `docs/JUDGES.md`.
-- Keep the fonts. The design deliberately mixes Jacquard 24, Jacquarda Bastarda 9, Jersey 10,
+- Keep the fonts. The design deliberately mixes Jacquard 24 (big titles only), Grenze Gotisch, Jersey 10,
   Doto, Cinzel Decorative, Special Elite and Workbench (all Google Fonts). Do not swap them for
   system or generic fonts.
 - Keep the 320×180 internal resolution and the dither pass; that is the look.

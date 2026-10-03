@@ -41,8 +41,8 @@ real game draw the actual offering image into it (nearest-neighbour downscale) a
 
 | Font | Used for |
 |---|---|
-| Jacquard 24 | Titles, stamps, stone buttons, wax seals |
-| Jacquarda Bastarda 9 | Labels and body copy |
+| Jacquard 24 | Big titles and ink stamps only (hard to read below ~40px) |
+| Grenze Gotisch | Labels, body copy, small headings, buttons (readable blackletter) |
 | Jersey 10 | Gladiator names, JOIN |
 | Doto | Timer, HP, scores, character count |
 | Cinzel Decorative | Emperor names |
@@ -66,8 +66,28 @@ real game draw the actual offering image into it (nearest-neighbour downscale) a
 
 ## Layout anchors (stage px)
 
-- Emperor plates: centres x = 511, 650, 790, 929; top 400; 128×44. These line up with the
+- Emperor plates (lobby only; dropped from battle and verdict): centres x = 511, 650, 790, 929; top 400; 128×44. These line up with the
   emperors drawn by `arena.js`; if you move the lodge in the renderer, move the plates.
-- Testimony papers: left 180 / 1020, top 414, 240×190; platen rollers at top 592.
-- CRT: left 562, top 452, 316 wide; screen 288×216.
-- Seal button: left 462, top 598, 66×66.
+- Battle: one big testimony sheet, left 60, top 432, 880×336, text 25px; opponent shows only a "writing…" tag under their HP bar.
+- Verdict: testimony papers left 180 / 1020, top 414, 240×190; platen rollers at top 592.
+- CRT: lobby left 562, top 452, 316 wide; battle left 1010, top 196, scaled 1.25. Screen 288×216.
+- Seal button: left 884, top 668, 104×104.
+
+## fx.js (drama layer)
+
+Manga / JoJo-style effects on top of every screen. `FX.init()` once, then:
+
+| Call | Effect |
+|---|---|
+| `FX.menace({x, y, w, h, color})` | floating ゴゴゴ in a zone, returns `stop()` |
+| `FX.pop(text, x, y)` | one-off sound effect (オラ, ドド) |
+| `FX.slam(text, {sub, color})` | giant centred impact text (ドン!) |
+| `FX.lines(ms)` | radial speed lines |
+| `FX.invert(n)` | negative-colour flash |
+| `FX.shake(ms, px)` | stage shake |
+| `FX.tbc(cb)` | sepia freeze + "TO BE CONTINUED" arrow |
+
+Wiring in the prototypes: lobby title slam-in, 参戦! on Enter; battle menace around both
+gladiators, オラ pops while typing, red timer + ゴゴゴ at 10 s, shake in the last 5 s, ドン! SEALED
+on Seal; verdict ドン! entrance, menace around the winner, ドドド by the damage, To Be Continued on
+Next Round, ガーン on Yield. Reduced-motion users get no loops, flashes or shakes.

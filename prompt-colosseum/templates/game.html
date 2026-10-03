@@ -28,7 +28,7 @@
 {% set plate_x = [574, 675, 767, 882] %}
 {% for s in seats %}
 <div style="position: absolute; left: {{ plate_x[loop.index0] }}px; top: 400px; transform: translateX(-50%); width: 90px; height: 44px; background: linear-gradient(180deg, #ECE2CB 0%, #BBAD92 100%); box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -2px 0 #8F8268, 0 3px 6px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px">
-<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 16px; line-height: 1; color: #2A1F15">{{ s.name }}</span>
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 14px; line-height: 1; white-space: nowrap; color: #2A1F15">{{ s.name }}</span>
 <span style="font-family: 'Workbench', monospace; font-size: 12px; line-height: 1; color: #154A6E; max-width: 86px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis">{{ s.model }}</span>
 </div>
 {% endfor %}
@@ -174,10 +174,10 @@
 <div style="position: absolute; left: 40px; top: 18px; width: 470px; display: flex; flex-direction: column; gap: 4px">
 <div style="display: flex; justify-content: space-between; align-items: baseline">
 <span id="p1-label" style="font-size: 22px; font-weight: 500; color: #C9B48A; text-shadow: 0 2px 0 #000">Gladiator the First</span>
-<span id="p1-hp" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 32px; color: #B6FF4A; text-shadow: 0 0 10px rgba(182,255,74,0.6)">100</span>
+<span id="p1-hp" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 32px; color: #C3D68A; text-shadow: 0 2px 0 #000, 0 0 6px rgba(150,190,80,0.35)">100</span>
 </div>
 <div id="p1-name" style="font-family: 'Jersey 10', sans-serif; font-size: 54px; line-height: 0.85; letter-spacing: 1px; color: #F6F0DE; text-shadow: 3px 3px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000, 0 0 18px rgba(182,255,74,0.55)"></div>
-<div id="p1-bar" style="display: flex; gap: 5px; padding-left: 4px; margin-top: 6px"></div>
+<div id="p1-bar" class="hp"></div>
 <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; font-family: 'Workbench', monospace; font-size: 14px; color: #C9B48A; text-shadow: 0 1px 0 #000">
 <span>context</span><span style="width: 200px; height: 8px; background: rgba(0,0,0,0.6); border: 1px solid #5A4632"><span id="p1-ctx" style="display: block; height: 100%; width: 0; background: #E9CF8E"></span></span><span id="p1-ctxn">0%</span>
 </div>
@@ -186,11 +186,11 @@
 
 <div style="position: absolute; right: 40px; top: 18px; width: 470px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px">
 <div style="width: 100%; display: flex; justify-content: space-between; align-items: baseline">
-<span id="p2-hp" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 32px; color: #FF4FB0; text-shadow: 0 0 10px rgba(255,79,176,0.6)">100</span>
+<span id="p2-hp" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 32px; color: #E4A0BC; text-shadow: 0 2px 0 #000, 0 0 6px rgba(200,80,130,0.35)">100</span>
 <span id="p2-label" style="font-size: 22px; font-weight: 500; color: #C9B48A; text-shadow: 0 2px 0 #000">Gladiator the Second</span>
 </div>
 <div id="p2-name" style="font-family: 'Jersey 10', sans-serif; font-size: 54px; line-height: 0.85; letter-spacing: 1px; color: #F6F0DE; text-shadow: 3px 3px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000, 0 0 18px rgba(255,79,176,0.55)"></div>
-<div id="p2-bar" style="display: flex; gap: 5px; padding-right: 4px; margin-top: 6px"></div>
+<div id="p2-bar" class="hp hp-p2"></div>
 <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; font-family: 'Workbench', monospace; font-size: 14px; color: #C9B48A; text-shadow: 0 1px 0 #000">
 <span id="p2-ctxn">0%</span><span style="width: 200px; height: 8px; background: rgba(0,0,0,0.6); border: 1px solid #5A4632; display: flex; justify-content: flex-end"><span id="p2-ctx" style="display: block; height: 100%; width: 0; background: #E9CF8E"></span></span><span>context</span>
 </div>

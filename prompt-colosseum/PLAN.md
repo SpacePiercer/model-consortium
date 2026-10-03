@@ -28,7 +28,7 @@ and the client side of reconnect (Phase 6.3); see the (done) marks below.
 | 2 Rooms, fake judges | done |
 | 3 Real judges | done; bribe check in `judges.py` |
 | 4 Round content | code done; pictures missing (2 of 6), wildcard list not confirmed |
-| 5 Verdict and flow | done, except the persona names |
+| 5 Verdict and flow | done |
 | 6 Polish | reconnect done; judging animation basic; sounds and practice mode not started |
 | 7 Deploy | prepared (`render.yaml`, `scripts/smoke.py`); no account yet |
 
@@ -37,9 +37,8 @@ and the client side of reconnect (Phase 6.3); see the (done) marks below.
    the Pictvra pool but not in `static/offerings/`, so only the two paintings come up. Grow the
    pool to 20+.
 2. Pictvra sample cases in `app/prompts/cases/` (ludus, minister and ars have them).
-3. 🙋 Persona names: keep Avgvsta/Brvtvs/Cassia/Decimvs or rename to fit the CEO caricatures.
-4. Phase 6: a real judging animation, then sounds, then practice mode.
-5. 🙋 A Render account, then deploy and run `scripts/smoke.py` against it.
+3. Phase 6: a real judging animation, then sounds, then practice mode.
+4. 🙋 A Render account, then deploy and run `scripts/smoke.py` against it.
 
 Run it: `python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt`, then
 `.venv/bin/python run.py` and open http://localhost:5001 in two tabs. Tests: `.venv/bin/python -m pytest tests`.
@@ -137,9 +136,9 @@ prototypes pixel for pixel.
 - (done) The verdict screen shows each Emperor's scores and remark (the Acta Imperatorum list
   took the place of the score plates), thumbs and happy/mad moods in the arena, the wound,
   HP bars and Victor / Victvs / Par stamps.
-- 🙋 The Emperors are now caricatures of Amodei, Altman, Zuckerberg and Musk, but the personas
-  (Avgvsta, Brvtvs, Cassia, Decimvs in `judges.py`, `JUDGES.md` and the lobby) still have the
-  old names. Rename them or keep them.
+- (done) The personas are named after the caricatures, left to right: Amodei, Altmanvs, Zvckervs,
+  Mvscvs (`judges.py`, `prompts/personas/`). Amodei keeps the precise temperament, Altmanvs the
+  mystic, Zvckervs the scholar, Mvscvs the blunt soldier.
 - (done) Both prompts side by side, a context bar under each player, and `/compact` and `/clear`
   buttons between rounds.
 - (done) Next round, the match-end screen and a two-click Yield.

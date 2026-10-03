@@ -12,16 +12,16 @@ in that order. Seats left empty are filled with random-score fake judges, so the
 
 | Seat | Persona | Provider | OpenAI-compatible base URL (verify) |
 |---|---|---|---|
-| augusta | Avgvsta | Google AI Studio (Gemini Flash) | `https://generativelanguage.googleapis.com/v1beta/openai/` |
-| brutus | Brvtvs | Groq (a vision model; `render.yaml` sets `GROQ_MODEL`) | `https://api.groq.com/openai/v1` |
-| cassia | Cassia | Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1` |
-| decimus | Decimvs | OpenRouter (a `:free` vision model, with fallbacks) | `https://openrouter.ai/api/v1` |
+| amodei | Amodei | Google AI Studio (Gemini Flash) | `https://generativelanguage.googleapis.com/v1beta/openai/` |
+| altman | Altmanvs | Groq (a vision model; `render.yaml` sets `GROQ_MODEL`) | `https://api.groq.com/openai/v1` |
+| zuckerberg | Zvckervs | Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1` |
+| musk | Mvscvs | OpenRouter (a `:free` vision model, with fallbacks) | `https://openrouter.ai/api/v1` |
 | (next) | next free persona | OpenAI (paid) | `https://api.openai.com/v1` |
 | (next) | next free persona | Anthropic (paid, OpenAI-compatible beta) | `https://api.anthropic.com/v1` |
 | (dev) | next free persona | Ollama, local (`gemma4:e4b`), optional dev seat | `http://localhost:11434/v1` |
 
 Personas are positional: the table shows the default order, but each registered provider simply
-takes the next persona. With only Gemini and OpenRouter keyed, OpenRouter sits as Brvtvs. To pick
+takes the next persona. With only Gemini and OpenRouter keyed, OpenRouter sits as Altmanvs. To pick
 who sits when more than 4 are keyed, leave the others' keys out of `.env`.
 
 All of them speak the OpenAI chat-completions format, so one client with a swappable `base_url`,

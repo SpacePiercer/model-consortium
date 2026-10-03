@@ -97,8 +97,9 @@ Server → client
 
 | event | payload |
 |---|---|
-| `room:state` | `{ code, players: [{ id, name, hp, connected }], phase }` |
-| `round:start` | `{ round, kind, title, brief, maxChars, endsAt, offering: { id, url \| task }, options, wildcard }` (endsAt = server epoch ms; `options` = 4 model keys, round 5 only; `wildcard` = `{ id, title, rule }` or null) |
+| `room:joined` | `{ code, you, token, name }` (private, to a new or rejoining player: `you` is `"p1"` or `"p2"`, and `token` is the `playerId` that `room:rejoin` needs; nobody else ever sees it) |
+| `room:state` | `{ code, players: [{ id, name, hp, connected, context }], phase, round, rounds }` (`id` is the public slot `"p1"` / `"p2"`, the same keys the verdict uses; `context` is the bar, 0 to 1) |
+| `round:start` | `{ round, kind, title, brief, maxChars, endsAt, serverNow, offering: { id, url \| task }, options, optionLabels, wildcard }` (endsAt and serverNow = server epoch ms, so the client can correct for clock skew; `options` = 4 model keys and `optionLabels` their names, round 5 only; `wildcard` = `{ id, title, rule }` or null). Sent again to a rejoining player with `you: { text, pick }` and `sealed: { p1, p2 }` added. |
 | `round:sealed` | `{ playerId, at }` |
 | `round:judging` | `{}` |
 | `round:verdict` | see below |
@@ -127,6 +128,13 @@ Server → client
 }
 ```
 
+Extra verdict fields: `dmg` (`{ p1, p2 }`, the HP each player lost; `damage` is the larger one and
+`loser` the player who lost more, or null when equal), `forfeit` (`"p1"` or `"p2"`, only when a
+disconnect cost them the round), and in round 5 `picks` (the model each player chose), `correct`
+(the right pickers, fastest first) and `answer` (the top-fit model keys). In round 5 `prompts`
+holds the picked model's name and `emperors` is empty. A rotted player's scores (context bar above
+85%) count x0.8 in `totals` and in each Emperor's vote, while the per-Emperor numbers shown stay raw.
+
 ## Phases (per room)
 
 `lobby → countdown(3 s) → writing → judging → verdict → (writing | finished)`
@@ -137,6 +145,10 @@ Server → client
   round: 40 × the round's multiplier damage, no crit. If they are still gone when the next round
   starts, they lose the match (`match:end` reason `disconnect`).
 - Yield: the player loses the match at once (`match:end` reason `yield`).
+- A lobby or countdown that loses a player (grace ran out) or everyone: the remaining player gets
+  an `error` ("The match was abandoned.") and the room is deleted.
+- `/compact` and `/clear` are accepted only on a verdict screen before round 5, once per player per
+  round. A pending `/clear` penalty is used up by the next sweep that would have healed.
 - Double seal: ignore after the first.
 - Seal after `endsAt`: reject; the server already auto-submitted the last draft.
 - Judges all fail: counts as a tie, both take 5 (no replay).

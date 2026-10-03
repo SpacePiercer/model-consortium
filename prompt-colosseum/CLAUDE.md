@@ -36,11 +36,14 @@ static/
   js/arena.js          # copied from design/arena.js
   js/emperors.js       # copied from design/emperors.js (emperor portraits; load before arena.js)
   js/game.js           # lobby, battle and verdict on one page, one Socket.IO connection
+                       # (today a plain dev client that speaks the whole protocol; the design port replaces it)
   css/theme.css        # extracted from the prototypes
   offerings/           # images referenced by the pools in app/rounds.py
 templates/
   game.html            # lobby, battle and verdict sections
 tests/
+run.py                 # dev server: .venv/bin/python run.py (port 5001; one process, rooms are in memory)
+requirements.txt       # python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .env.example
 ```
 

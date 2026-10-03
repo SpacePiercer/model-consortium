@@ -4,7 +4,14 @@
 `app/judges.py` (judges, aggregation, bribe check, probe) with `tests/test_judges.py`.
 Phase 0 passed with two live judges (Gemini + Groq). `app/prompts/` holds the judge prompt,
 personas, score-anchor rubrics and sample cases; `python3 app/calibrate.py` checks them live.
-**Next:** a real picture in `static/offerings/` (then Pictvra cases), and Phases 1–2.
+Phases 1–2 (server side) are done: `app/rooms.py`, `app/events.py`, `app/__init__.py`, `run.py`,
+with `tests/test_rooms.py`. A plain dev client (`templates/game.html`, `static/js/game.js`) speaks
+the whole protocol, and two browser tabs played a full 5-round match (fake judges).
+**Next:** the design port onto that protocol, a real picture in `static/offerings/` (then Pictvra
+cases), and real judges in a match (`JUDGES=live`).
+
+Run it: `python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt`, then
+`.venv/bin/python run.py` and open http://localhost:5001 in two tabs. Tests: `.venv/bin/python -m pytest tests`.
 
 Each phase ends with something that runs. 🙋 marks the points where we need input from you.
 Phases 1–2 don't need API keys, so they can start while the keys come in.

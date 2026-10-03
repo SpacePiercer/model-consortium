@@ -287,13 +287,14 @@ def drop_outliers(emps):
             e["error"] = "outlier"
 
 
-def aggregate(emps):
-    """(totals scaled to the full panel, unanimous) or (None, False) if everyone abstained."""
+def aggregate(emps, weights=None):
+    """(totals scaled to the full panel, unanimous) or (None, False) if everyone abstained.
+    `weights` ({"p1": 0.8}) scales a player's total, e.g. for context rot."""
     got = [e for e in emps if e["vote"] is not None]
     if not got:
         return None, False
-    k = len(emps) / len(got)
-    totals = {p: int(sum(e[p] for e in got) * k + 0.5) for p in ("p1", "p2")}
+    k, w = len(emps) / len(got), weights or {}
+    totals = {p: int(sum(e[p] for e in got) * k * w.get(p, 1) + 0.5) for p in ("p1", "p2")}
     return totals, len({e["vote"] for e in got}) == 1 and got[0]["vote"] != "tie"
 
 
@@ -308,7 +309,7 @@ def sweep(emps, offering):
     return out
 
 
-def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None):
+def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None, weights=None):
     if rnd["kind"] == "choice":
         raise ValueError("choice rounds have no judges; score them with rounds.score_choice")
     seats = get_seats()
@@ -316,7 +317,9 @@ def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None):
         seats = [s for s, on in zip(seats, list(seated) + [True] * len(seats)) if on]
     if not seats:
         raise RuntimeError("no judges seated: use JUDGES=fake or add API keys to .env")
-    image = _image_url(offering["file"]) if "file" in offering else None
+    # fake judges never look at the picture, so don't require the file to exist for them
+    real = any(s.judge.provider != "fake" for s in seats)
+    image = _image_url(offering["file"]) if "file" in offering and real else None
     pool = ThreadPoolExecutor(max_workers=len(seats))
     futs = [pool.submit(_emperor, s, rnd, offering, p1, p2, wildcard, image) for s in seats]
     done, _ = wait(futs, timeout=max(DEADLINE, max(s.judge.timeout for s in seats) + 5))
@@ -324,6 +327,8 @@ def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None):
     emps = [f.result() if f in done else _blank(s, "deadline") for f, s in zip(futs, seats)]
 
     flags = {"p1": flagged(p1), "p2": flagged(p2)}
+    empty = {"p1": not p1.strip(), "p2": not p2.strip()}  # an empty testimony scores 0
+    w = {"p1": 1, "p2": 1, **(weights or {})}
     drop_outliers(emps)  # on raw scores, so a judge that fell for a bribe is the one dropped
     for e in emps:
         if e["p1"] is None:
@@ -331,10 +336,13 @@ def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None):
         for p in flags:
             if flags[p]:
                 e[p] = min(e[p], BRIBE_CAP)
-        e["vote"] = "p1" if e["p1"] > e["p2"] else "p2" if e["p2"] > e["p1"] else "tie"
-    totals, unanimous = aggregate(emps)
+            if empty[p]:
+                e[p] = 0
+        a, b = e["p1"] * w["p1"], e["p2"] * w["p2"]
+        e["vote"] = "p1" if a > b else "p2" if b > a else "tie"
+    totals, unanimous = aggregate(emps, w)
     swept = sweep(emps, offering)
-    swept = {p: swept[p] and not flags[p] for p in swept}
+    swept = {p: swept[p] and not flags[p] and not empty[p] for p in swept}
     return {"emperors": emps, "totals": totals, "unanimous": unanimous, "flagged": flags,
             "sweep": swept}
 

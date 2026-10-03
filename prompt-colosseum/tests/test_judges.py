@@ -132,6 +132,26 @@ def test_fake_mode_is_repeatable():
     assert first == run() and len(first[1]) == 4 and first[0] is not None
 
 
+def test_weights_scale_totals_and_flip_votes():
+    with patch.object(judges, "_seats", stub_seats()), patch.object(judges, "_chat", stub_chat):
+        r = judges.judge_round(TASK_ROUND, TASK, "ALPHA essay", "BETA essay", weights={"p1": 0.3})
+    # raw: 9 vs 3 from each of 3 Emperors; context rot makes p1 count 0.3x: 27 -> 8, and each vote flips
+    assert r["totals"] == {"p1": 8, "p2": 9} and {e["vote"] for e in r["emperors"]} == {"p2"}
+
+
+def test_an_empty_testimony_scores_zero():
+    with patch.object(judges, "_seats", stub_seats()), patch.object(judges, "_chat", stub_chat):
+        r = judges.judge_round(TASK_ROUND, TASK, "ALPHA essay", "   ")
+    assert all(e["p2"] == 0 for e in r["emperors"]) and r["totals"] == {"p1": 27, "p2": 0}
+    assert r["sweep"]["p2"] is False
+
+
+def test_fake_judges_need_no_picture_file():
+    offering = {"id": "nope", "file": "this-file-does-not-exist.jpg"}
+    with patch.object(judges, "_seats", judges.build_seats("fake")):
+        assert judges.judge_round(rounds.ROUNDS[0], offering, "a", "b")["totals"] is not None
+
+
 def test_choice_round_has_no_judges():
     assert raises(judges.judge_round, rounds.ROUNDS[-1], rounds.ROUNDS[-1]["pool"][0], "a", "b")
 

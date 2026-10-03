@@ -20,7 +20,7 @@ PAUSE = 10  # seconds between cases: Groq's free tier allows about 8000 tokens a
 
 
 def main(argv):
-    judges._seats = judges.build_seats("live")
+    judges._seats = judges.real_seats()  # no fake fillers: their random scores would be noise
     if not judges._seats:
         sys.exit("No judges registered. Fill in .env first.")
     judged = [r for r in rounds.ROUNDS if r["kind"] != "choice"]

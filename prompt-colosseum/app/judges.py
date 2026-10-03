@@ -157,6 +157,12 @@ def build_seats(mode=None):
     return [Seat(*EMPERORS[i], judge=j) for i, j in enumerate(judges)]
 
 
+def real_seats():
+    """Live judges only, without the fake fillers. For the probe and calibrate.py, where a fake
+    that always answers would make a broken setup look healthy."""
+    return [s for s in build_seats("live") if s.judge.provider != "fake"]
+
+
 def get_seats():
     global _seats
     if _seats is None:
@@ -337,7 +343,7 @@ def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None):
 
 def probe(argv):
     global _seats
-    _seats = build_seats("live")
+    _seats = real_seats()
     judges = _live_judges()
     print("Registered judges (the probe always runs live):")
     for i, j in enumerate(judges):

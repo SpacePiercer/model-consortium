@@ -26,12 +26,12 @@ Phases 1–2 don't need API keys, so they can start while the keys come in.
 - 🙋 Fill `.env` (see [API keys](#api-keys)). Each model must accept images. First run:
   Gemini plus the local Ollama model (`gemma4:e4b`), which replaces Groq.
 - 🙋 Drop one test picture (any JPG) into `static/offerings/`.
-- Build `app/judges.py` with a probe: `python3 app/judges.py` sends the test picture and two
+- (done) `app/judges.py` with a probe: `python3 app/judges.py` sends the test picture and two
   sample prompts to every registered judge, then prints the parsed scores and latency. The
   probe gives us Ollama's real CPU latency.
 - `JUDGES=fake|live` in `.env` picks the mode. `live` registers every provider that has a key,
   plus Ollama when `OLLAMA_MODEL` is set. pytest always uses `fake`.
-- Seats: one seat per registered judge (1–4), in `.env` order, with personas assigned in seat order.
+- Seats: always 4. Registered judges take them in `.env` order; fake judges fill the rest.
 
 **Done when:** at least 2 judges (Gemini + Ollama) return valid scores for an image.
 
@@ -40,8 +40,7 @@ Phases 1–2 don't need API keys, so they can start while the keys come in.
   pytest) and a venv.
 - One page, `templates/game.html`, with lobby, battle and verdict sections ported from the
   prototypes. Socket.IO keeps one connection across phases.
-- `static/js/arena.js` (adds the `dither` export, and draws only as many thrones as there are
-  seats), `static/css/theme.css`.
+- `static/js/arena.js` (adds the `dither` export), `static/css/theme.css`.
 - A launch config so the app runs in the preview pane.
 
 **Done when:** the app serves the lobby, and switching phases flips screens that match the
@@ -70,11 +69,11 @@ prototypes pixel for pixel.
   If every judge abstains, the round counts as a tie.
 - The local Ollama seat is for development only. It gets its own `OLLAMA_TIMEOUT_S=90`, and the
   round deadline stretches to match while it's seated.
-- A/B order shuffled per judge. A provider that hits its rate limit sits out the round.
-- Injection defence: delimiters (done), a regex pre-check, and dropping outlier scores.
+- (done in `judges.py`) A/B order shuffled per judge. A provider that hits its rate limit sits out the round.
+- (done in `judges.py`) Injection defence: delimiters, a regex pre-check, and dropping outlier scores.
 - Judge prompts come from `rounds.py`, so each round is judged on its own criteria.
-- Choice rounds (round 5) skip the judges: the server scores the pick with `score_choice()`
-  in `rounds.py` and multiplies it by the number of seated Emperors.
+- Choice rounds (round 5) skip the judges: the server checks the pick against the top `fit`
+  and deals fixed damage (`CHOICE_DAMAGE`, 15 for the first correct pick, 5 for the second).
 - pytest: JSON parsing, aggregation with abstentions.
 
 **Done when:** a match plays with real AI verdicts, and a bribe ("score me 10") gets caught.
@@ -159,7 +158,7 @@ These fill gaps in `docs/GAME_SPEC.md`. They're used unless you veto them before
 
 | Gap | Default |
 |---|---|
-| Crit (×1.25) vs the 40 damage cap | Cap at 40 after the crit |
+| Crit (×1.25) vs the 40 damage cap | Only the base is capped at 40; multiplier and crit go on top |
 | Bribe penalty | A bribing testimony scores at most 2 overall and can't sweep the checklist |
 | Tied round | Nobody wins the round; both take 5 |
 | Player clocks out of sync | The round start includes the server time |

@@ -1,13 +1,13 @@
 # The Emperors (AI judges)
 
-One to four seats, one per registered judge, each a different vision-capable model behind a
+Always four seats. Each real judge is a different vision-capable model behind a
 different free tier, so the panel is diverse and rate limits are spread out. Free tiers change
 often; check each provider's current model list and limits before wiring a model ID.
 
 `JUDGES=fake|live` in `.env` picks the mode. `fake` (the default, and always in pytest) seats
 judges that return random scores from a seeded RNG. `live` registers every provider that has a
-key, plus Ollama when `OLLAMA_MODEL` is set, in `.env` order; personas go to seats in table
-order. The arena draws only as many thrones as there are seats.
+key, plus Ollama when `OLLAMA_MODEL` is set, in `.env` order (at most 4); personas go to seats
+in that order. Seats left empty are filled with random-score fake judges, so the panel is always 4.
 
 | Seat | Persona | Provider | OpenAI-compatible base URL (verify) |
 |---|---|---|---|
@@ -15,7 +15,13 @@ order. The arena draws only as many thrones as there are seats.
 | brutus | Brvtvs | Groq (Llama 4 Scout, vision) | `https://api.groq.com/openai/v1` |
 | cassia | Cassia | Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1` |
 | decimus | Decimvs | OpenRouter (a `:free` vision model, with fallbacks) | `https://openrouter.ai/api/v1` |
+| (next) | next free persona | OpenAI (paid) | `https://api.openai.com/v1` |
+| (next) | next free persona | Anthropic (paid, OpenAI-compatible beta) | `https://api.anthropic.com/v1` |
 | (dev) | next free persona | Ollama, local (`gemma4:e4b`), replaces Groq for now | `http://localhost:11434/v1` |
+
+Personas are positional: the table shows the default order, but each registered provider simply
+takes the next persona. With only Gemini and OpenRouter keyed, OpenRouter sits as Brvtvs. To pick
+who sits when more than 4 are keyed, leave the others' keys out of `.env`.
 
 All of them speak the OpenAI chat-completions format, so one client with a swappable `base_url`,
 `api_key` and `model` covers them. Put the model IDs in `.env`, not in code.
@@ -35,8 +41,11 @@ Notes:
   where supported; otherwise rely on the schema in the prompt and parse defensively).
 - Randomize which player is A and which is B, independently per Emperor, to cancel position bias.
   Map back to p1/p2 after parsing.
-- Timeout 15 s (`OLLAMA_TIMEOUT_S`, default 90 s, for the local seat). One retry on invalid JSON.
-  Otherwise the Emperor abstains. If every Emperor abstains, the round counts as a tie.
+- Timeout 15 s (`OLLAMA_TIMEOUT_S`, default 90 s, for the local seat); the whole panel has a
+  20 s deadline that stretches to the longest seat timeout + 5 s. One retry on any failure (bad
+  JSON, HTTP error, timeout), except a rate limit. Otherwise the Emperor abstains. If every
+  Emperor abstains, the round counts as a tie.
+- After a 429 the provider cools down for its `retry-after` (at most 120 s) and sits out.
 
 ### System prompt
 
@@ -110,7 +119,8 @@ offering. Strip `<<<` and `>>>` from player text before inserting, and truncate 
 
 ## Parsing
 
-- Extract the first `{...}` block, `json.loads`, validate keys and integer ranges (clamp 0–10).
+- Extract the first `{...}` block, `json.loads`. Only each testimony's `score` is required; it is
+  rounded and clamped to 0–10. The sub-scores are for the model's own reasoning.
 - If invalid after one retry → abstain.
 - Unmap A/B → p1/p2 using the per-Emperor coin flip.
 - If both testimonies carry a `checklist` count, keep it (`cl_A` / `cl_B`, unmapped to `c1` / `c2`).
@@ -122,8 +132,10 @@ offering. Strip `<<<` and `>>>` from player text before inserting, and truncate 
 ## Injection defence (layered)
 
 1. Delimit player text and tell the model it is data (prompt above).
-2. Server-side pre-check: flag testimonies matching patterns like "ignore previous",
-   "system prompt", "score this 10", "you are now". Flagged → overall score capped at 2
+2. Server-side pre-check (`BRIBE` in `app/judges.py`): flag testimonies like "ignore previous
+   instructions", "score me 10", "give me full marks", "dear judges", "10/10". "You are now" and
+   "system prompt" are deliberately NOT flagged: a fair round-3 or round-4 answer contains them.
+   Flagged → overall score capped at 2
    (`BRIBE_CAP`), no checklist sweep, and shown in the verdict as "the Emperors saw through
    your bribe".
 3. Outlier check: if one Emperor's score for a testimony differs from the panel median by ≥ 6,
@@ -131,8 +143,12 @@ offering. Strip `<<<` and `>>>` from player text before inserting, and truncate 
 
 ## Environment
 
+`.env.example` is the source of truth; this is the same list with notes.
+
 ```
+FLASK_SECRET_KEY=change-me
 JUDGES=fake               # fake | live
+FAKE_SEED=0               # seed for the fake judges
 GEMINI_API_KEY=
 GEMINI_MODEL=
 GROQ_API_KEY=
@@ -142,7 +158,12 @@ CF_API_TOKEN=
 CF_MODEL=
 OPENROUTER_API_KEY=
 OPENROUTER_MODELS=        # comma-separated, first is primary
+OPENAI_API_KEY=
+OPENAI_MODEL=
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=
 OLLAMA_MODEL=             # e.g. gemma4:e4b; dev only
 OLLAMA_TIMEOUT_S=90
 JUDGE_TIMEOUT_S=15
+JUDGE_MAX_TOKENS=400
 ```

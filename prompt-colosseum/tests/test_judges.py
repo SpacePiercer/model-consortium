@@ -106,6 +106,15 @@ def test_round_unmaps_ab_and_caps_bribes():
         assert r["totals"] == {"p1": 6, "p2": 9} and {e["vote"] for e in r["emperors"]} == {"p2"}
 
 
+def test_live_seats_fill_with_fakes():
+    env = {"GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-x"}
+    with patch.dict("os.environ", env, clear=True):
+        seats = judges.build_seats("live")
+    assert [s.judge.provider for s in seats] == ["gemini", "fake", "fake", "fake"]
+    with patch.dict("os.environ", {}, clear=True):
+        assert [s.judge.provider for s in judges.build_seats("live")] == ["fake"] * 4
+
+
 def test_fake_mode_is_repeatable():
     def run():
         with patch.object(judges, "_seats", judges.build_seats("fake")):

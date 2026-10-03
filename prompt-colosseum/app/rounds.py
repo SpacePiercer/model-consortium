@@ -6,9 +6,8 @@ unused offering from its pool. Grow the pools freely; nothing else has to change
 
   kind "image":  the offering is a picture in static/offerings/, attached to the judge call.
   kind "task":   the offering is a text brief, shown on the CRT and sent to the judges as text.
-  kind "choice": no AI judges. Players pick a model from MODELS and the server scores the pick
-                 from the offering's "fit" key with score_choice(). Multiply that 0-10 score by
-                 the number of seated Emperors so totals match the judged rounds' scale.
+  kind "choice": no AI judges. Players pick from options() (4 MODELS cards); a pick with the
+                 top "fit" is correct and deals CHOICE_DAMAGE (first / second correct pick).
 
 Each round also carries its limits (max_chars, seconds) and damage_mult. Each judged round names
 two criteria of its own; the SHARED criteria (clarity, constraints, economy) are added to every

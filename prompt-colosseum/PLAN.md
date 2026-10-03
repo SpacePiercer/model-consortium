@@ -8,9 +8,10 @@ Phases 1–2 (server side) are done: `app/rooms.py`, `app/events.py`, `app/__ini
 with `tests/test_rooms.py`. The design port is done: `templates/game.html` and `static/js/game.js`
 put the lobby, battle and verdict prototypes on one page over that protocol (fake judges played a
 full 5-round match on it in two tabs).
-Two public-domain paintings are in `static/offerings/` (`starry-night.jpg`, `great-wave.jpg`), and
-a full match has played on the real judges (`JUDGES=live`) under gunicorn. Until more pictures
-arrive, `draw()` only picks pictures that exist.
+All six pictures of the Pictvra pool are in `static/offerings/` (all public domain or CC0, from
+Wikimedia Commons; the Tetris logo is trademarked, so demo only), and a full match has played on
+the real judges (`JUDGES=live`) under gunicorn and through the ported UI in two browser tabs.
+`draw()` skips any picture that is not on disk. `app/prompts/cases/pictura.json` has five cases.
 Design refresh (2026-10-03, see `design/README.md`): a big typing sheet on the battle screen,
 Grenze Gotisch body font, comic-book effects in `design/fx.js` (Latin slams, rising ✠ glyphs, speed
 lines, shake, "Continvatvr"), a crowd in robes and hides, a Red Room lodge, and the four Emperors
@@ -27,18 +28,19 @@ and the client side of reconnect (Phase 6.3); see the (done) marks below.
 | 1 Screens | done |
 | 2 Rooms, fake judges | done |
 | 3 Real judges | done; bribe check in `judges.py` |
-| 4 Round content | code done; pictures missing (2 of 6), wildcard list not confirmed |
+| 4 Round content | code done; all 6 pictures in, Pictvra cases for 2 of them; wildcard list not confirmed |
 | 5 Verdict and flow | done, except the persona names |
 | 6 Polish | reconnect done; judging animation basic; sounds and practice mode not started |
 | 7 Deploy | prepared (`render.yaml`, `scripts/smoke.py`); no account yet |
 
 **Next:**
-1. 🙋 Pictures: `lighthouse.jpg`, `desert-dunes.jpg`, `game-logo-01.png`, `pixel-castle.png` are in
-   the Pictvra pool but not in `static/offerings/`, so only the two paintings come up. Grow the
-   pool to 20+.
-2. Pictvra sample cases in `app/prompts/cases/` (ludus, minister and ars have them).
+1. 🙋 More pictures: the six in the Pictvra pool are all in `static/offerings/`. Grow the pool
+   toward 20+ (landscapes, logos, paintings, pixel art; public domain or your own).
+2. Pictvra sample cases for `lighthouse`, `desert-dunes`, `game-logo-01` and `pixel-city`
+   (the two paintings, ludus, minister and ars already have them).
 3. 🙋 Persona names: keep Avgvsta/Brvtvs/Cassia/Decimvs or rename to fit the CEO caricatures.
-4. Phase 6: a real judging animation, then sounds, then practice mode.
+4. Phase 6: a real judging animation (the wait can reach 20 s when Gemini's free tier answers 503),
+   then sounds, then practice mode.
 5. 🙋 A Render account, then deploy and run `scripts/smoke.py` against it.
 
 Run it: `python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt`, then

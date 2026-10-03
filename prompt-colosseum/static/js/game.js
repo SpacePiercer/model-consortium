@@ -135,7 +135,7 @@
   const left = () => Math.max(0, Math.ceil((endsAt - (Date.now() + skew)) / 1000));
   const paintTimer = () => {
     const t = left(), timer = $("timer");
-    timer.textContent = "00:" + String(t).padStart(2, "0");
+    timer.textContent = String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0");
     timer.classList.toggle("fx-hot", t <= 10);
     if (t !== lastSec) {
       if (t === 10 && lastSec > 10) { FX.lines(900, { color: "rgba(176,76,255,0.7)" }); FX.slam("Tempvs Fvgit", { sub: "10 SECONDS", color: "#C98CFF", size: 110 }); }

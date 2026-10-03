@@ -37,10 +37,10 @@ ROUNDS = [
         "pool": [
             {"id": "lighthouse", "category": "landscape", "file": "lighthouse.jpg"},
             {"id": "desert-dunes", "category": "landscape", "file": "desert-dunes.jpg"},
-            {"id": "game-logo-01", "category": "logo", "file": "game-logo-01.png"},
+            {"id": "game-logo-01", "category": "logo", "file": "game-logo-01.jpg"},
             {"id": "starry-night", "category": "painting", "file": "starry-night.jpg"},
             {"id": "great-wave", "category": "painting", "file": "great-wave.jpg"},
-            {"id": "pixel-castle", "category": "pixel", "file": "pixel-castle.png"},
+            {"id": "pixel-city", "category": "pixel", "file": "pixel-city.png"},
         ],
     },
     {

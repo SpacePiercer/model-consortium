@@ -25,7 +25,9 @@ python3 app/calibrate.py minister    # one round only
 ```
 
 `calibrate.py` makes real API calls (one per judge per case) and pauses 10 s between cases to
-stay under Groq's free per-minute limit. A MISS means the panel's totals picked a different winner than
+stay under Groq's free per-minute limit. A picture is heavy for Groq (several thousand
+tokens), so the Pictvra cases often show `Brvtvs abstained`; the case still counts the judges
+that answered. A MISS means the panel's totals picked a different winner than
 expected: read each judge's scores, then fix the rubric anchors or the case, whichever was wrong.
 
 ## Adding things
@@ -33,6 +35,6 @@ expected: read each judge's scores, then fix the rubric anchors or the case, whi
 - **A case:** add an object to `cases/<round>.json`: `id`, `offering` (a pool id), `p1`, `p2`,
   `winner`, `why`. Keep each prompt within the round's `max_chars`. Put `bribe` in the id if
   `p1` begs the judges for marks (the test checks that exactly those cases trip the filter).
-- **Pictura cases:** none yet, because they need the real pictures. Once a picture is in
-  `static/offerings/`, add `cases/pictura.json` with that picture's pool id.
+- **Pictvra cases:** `cases/pictura.json` covers `starry-night` and `great-wave`; the other four
+  pictures (`lighthouse`, `desert-dunes`, `game-logo-01`, `pixel-city`) have no cases yet.
 - **A new round:** add its entry to `ROUNDS`, then `rubrics/<id>.md` with a section per criterion.

@@ -44,6 +44,9 @@ templates/
 tests/
 run.py                 # dev server: .venv/bin/python run.py (port 5001; one process, rooms are in memory)
 requirements.txt       # python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
+requirements-dev.txt   # adds the Socket.IO client that scripts/smoke.py needs
+scripts/smoke.py       # plays a whole match with two bots against any running server (the deploy check)
+../render.yaml         # Render blueprint (repo root): gunicorn -w 1 --threads 100 run:app
 .env.example
 ```
 

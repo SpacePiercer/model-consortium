@@ -84,6 +84,17 @@ def test_outliers():
     assert pair[0]["p1"] == 9 and pair[1]["p1"] == 1
 
 
+def test_fake_fillers_never_knock_out_real_judges():
+    # two real judges agree on low scores; two random fillers score high. Counted together, a real
+    # judge would look like an outlier; the fillers must be ignored altogether.
+    emps = [emp(0, 0, None), emp(1, 0, None), dict(emp(9, 9, None), fake=True), dict(emp(8, 2, None), fake=True)]
+    judges.drop_outliers(emps)
+    assert [e["p1"] for e in emps] == [0, 1, 9, 8]
+    real = [emp(8, 3, None), emp(8, 3, None), emp(1, 3, None), dict(emp(9, 9, None), fake=True)]
+    judges.drop_outliers(real)  # with three real judges the check still works, and still ignores the filler
+    assert [e["p1"] for e in real] == [8, 8, None, 9]
+
+
 def stub_chat(judge, messages, json_mode):
     """Scores whichever testimony contains ALPHA with 9, the other with 3."""
     a = messages[1]["content"].split("TESTIMONY A:")[1].split("TESTIMONY B:")[0]

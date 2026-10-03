@@ -7,8 +7,11 @@ personas, score-anchor rubrics and sample cases; `python3 app/calibrate.py` chec
 Phases 1–2 (server side) are done: `app/rooms.py`, `app/events.py`, `app/__init__.py`, `run.py`,
 with `tests/test_rooms.py`. A plain dev client (`templates/game.html`, `static/js/game.js`) speaks
 the whole protocol, and two browser tabs played a full 5-round match (fake judges).
-**Next:** the design port onto that protocol, a real picture in `static/offerings/` (then Pictvra
-cases), and real judges in a match (`JUDGES=live`).
+Two public-domain paintings are in `static/offerings/` (`starry-night.jpg`, `great-wave.jpg`), and
+a full match has played on the real judges (`JUDGES=live`) under gunicorn. Until more pictures
+arrive, `draw()` only picks pictures that exist.
+**Next:** the design port onto that protocol, more pictures (lighthouse, desert, a logo, pixel
+art) and Pictvra sample cases, and a Render account for the deploy.
 
 Run it: `python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt`, then
 `.venv/bin/python run.py` and open http://localhost:5001 in two tabs. Tests: `.venv/bin/python -m pytest tests`.
@@ -117,7 +120,15 @@ prototypes pixel for pixel.
 - 🙋 A Render or Fly account (free tier), who presents, and a rough demo script.
 - 🙋 A few dollars on one paid provider (OpenAI or Anthropic) as the second live seat, because
   Ollama is too slow for the live demo and Gemini alone is a single point of failure.
-- Deploy as one worker, since rooms live in memory. Vercel can't hold websockets.
+- (prepared) Deploy as one worker, since rooms live in memory. Vercel can't hold websockets.
+  `gunicorn -w 1 --threads 100 run:app` is checked locally: websockets work and a full match
+  plays under it. `render.yaml` (repo root) is a Render blueprint with that start command, a
+  `/healthz` check, and the env vars to fill in (keys are `sync: false`: set them in the
+  dashboard, never in git). The free plan sleeps after ~15 min idle: open the site before the demo.
+- After every deploy run `.venv/bin/python scripts/smoke.py https://<your-app>`: two bots play a
+  whole match and it fails loudly if websockets, judges or pictures are broken. (Against live
+  judges the bots finish rounds in seconds, so Groq's 8000 tokens/min limit can abstain a judge
+  in round 4; real rounds are slower.)
 - Test the deploy on the venue Wi-Fi, and record a backup video.
 - Freeze the code about 3 h before judging.
 - Demo beats: a normal round, a bribe caught live, a wildcard round.

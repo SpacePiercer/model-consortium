@@ -18,6 +18,8 @@ import random
 import re
 from pathlib import Path
 
+OFFERINGS = Path(__file__).resolve().parent.parent / "static" / "offerings"
+
 ROUNDS = [
     {
         "id": "pictura",
@@ -185,9 +187,11 @@ def round_for(n):
 
 
 def draw(n, used=()):
-    """Pick a random offering for round n, skipping ids in `used` until the pool runs dry."""
+    """Pick a random offering for round n, skipping ids in `used` until the pool runs dry.
+    Pictures that are not in static/offerings/ yet are skipped too, as long as some are there."""
     rnd = round_for(n)
-    fresh = [o for o in rnd["pool"] if o["id"] not in used] or rnd["pool"]
+    have = [o for o in rnd["pool"] if "file" not in o or (OFFERINGS / o["file"]).exists()] or rnd["pool"]
+    fresh = [o for o in have if o["id"] not in used] or have
     return rnd, random.choice(fresh)
 
 
@@ -284,8 +288,12 @@ if __name__ == "__main__":
     # Self-check and preview: python3 app/rounds.py
     assert round_for(len(ROUNDS) + 1) is ROUNDS[0]
     pool = ROUNDS[0]["pool"]
+    real_dir, OFFERINGS = OFFERINGS, Path("/nonexistent")   # no pictures: every pool entry counts
     assert draw(1, used={o["id"] for o in pool[1:]})[1] is pool[0]
     assert draw(1, used={o["id"] for o in pool})[1] in pool
+    OFFERINGS = real_dir
+    assert all((OFFERINGS / draw(1)[1]["file"]).exists() for _ in range(50)) or not any(
+        (OFFERINGS / o["file"]).exists() for o in pool)      # pictures we have beat pictures we don't
     assert "<<<" not in clean("<<>>><") and len(clean("x" * 999)) == 400
     for rnd in ROUNDS:
         assert len({o["id"] for o in rnd["pool"]}) == len(rnd["pool"]), rnd["id"]

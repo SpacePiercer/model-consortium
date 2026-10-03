@@ -243,7 +243,7 @@ def _image_url(file):
 
 def _blank(seat, error=None):
     return {"id": seat.id, "name": seat.name, "model": seat.judge.label, "p1": None, "p2": None,
-            "vote": None, "remark": "", "ms": 0, "error": error}
+            "vote": None, "remark": "", "ms": 0, "error": error, "fake": seat.judge.provider == "fake"}
 
 
 def _emperor(seat, rnd, offering, p1, p2, wildcard, image):
@@ -277,7 +277,8 @@ def flagged(text):
 
 
 def drop_outliers(emps):
-    ok = [e for e in emps if e["p1"] is not None]
+    # random fillers neither move the median nor get dropped: they would only knock out real judges
+    ok = [e for e in emps if e["p1"] is not None and not e.get("fake")]
     if len(ok) < 3:  # a median of two judges means nothing
         return
     med = {p: statistics.median([e[p] for e in ok]) for p in ("p1", "p2")}
@@ -330,6 +331,9 @@ def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None, weights=None)
     empty = {"p1": not p1.strip(), "p2": not p2.strip()}  # an empty testimony scores 0
     w = {"p1": 1, "p2": 1, **(weights or {})}
     drop_outliers(emps)  # on raw scores, so a judge that fell for a bribe is the one dropped
+    for e in emps:
+        if e["error"]:  # the server log is the only place these show up; the clients just see an abstention
+            print("[judges] %s (%s) abstained: %s" % (e["name"], e["model"], e["error"]), flush=True)
     for e in emps:
         if e["p1"] is None:
             continue

@@ -2,7 +2,9 @@
 (needs the venv: .venv/bin/python tests/test_rooms.py)"""
 import json
 import sys
+import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app import create_app, rooms, rounds  # noqa: E402
@@ -262,6 +264,18 @@ def test_seal_after_the_hourglass_is_rejected():
     room, clock, out = start()
     clock.t = room.ends_at / 1000 + 0.5                   # the timer has not fired yet, the time is up
     assert raises(room.seal, "p1", "late")
+
+
+def test_pictures_we_do_not_have_are_never_drawn_while_others_exist():
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / "starry-night.jpg").write_bytes(b"x")
+        with patch.object(rounds, "OFFERINGS", Path(d)):
+            assert {rounds.draw(1)[1]["id"] for _ in range(60)} == {"starry-night"}
+            (Path(d) / "great-wave.jpg").write_bytes(b"x")
+            assert {rounds.draw(1)[1]["id"] for _ in range(80)} == {"starry-night", "great-wave"}
+            assert {rounds.draw(1, used={"starry-night"})[1]["id"] for _ in range(40)} == {"great-wave"}
+    with patch.object(rounds, "OFFERINGS", Path("/nonexistent")):
+        assert len({rounds.draw(1)[1]["id"] for _ in range(100)}) > 2     # no pictures at all: the whole pool
 
 
 def test_judges_all_failing_is_a_tie():

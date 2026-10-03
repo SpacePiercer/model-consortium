@@ -26,4 +26,8 @@ def create_app(clock=None, judge=None):
     def index():
         return render_template("game.html")
 
+    @app.get("/healthz")
+    def healthz():
+        return "ok"                             # for the host's health check
+
     return app

@@ -84,6 +84,17 @@ def test_outliers():
     assert pair[0]["p1"] == 9 and pair[1]["p1"] == 1
 
 
+def test_fake_fillers_never_knock_out_real_judges():
+    # two real judges agree on low scores; two random fillers score high. Counted together, a real
+    # judge would look like an outlier; the fillers must be ignored altogether.
+    emps = [emp(0, 0, None), emp(1, 0, None), dict(emp(9, 9, None), fake=True), dict(emp(8, 2, None), fake=True)]
+    judges.drop_outliers(emps)
+    assert [e["p1"] for e in emps] == [0, 1, 9, 8]
+    real = [emp(8, 3, None), emp(8, 3, None), emp(1, 3, None), dict(emp(9, 9, None), fake=True)]
+    judges.drop_outliers(real)  # with three real judges the check still works, and still ignores the filler
+    assert [e["p1"] for e in real] == [8, 8, None, 9]
+
+
 def stub_chat(judge, messages, json_mode):
     """Scores whichever testimony contains ALPHA with 9, the other with 3."""
     a = messages[1]["content"].split("TESTIMONY A:")[1].split("TESTIMONY B:")[0]
@@ -106,6 +117,23 @@ def test_round_unmaps_ab_and_caps_bribes():
         assert r["totals"] == {"p1": 6, "p2": 9} and {e["vote"] for e in r["emperors"]} == {"p2"}
 
 
+def test_live_seats_fill_with_fakes():
+    env = {"GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-x"}
+    with patch.dict("os.environ", env, clear=True):
+        seats = judges.build_seats("live")
+    assert [s.judge.provider for s in seats] == ["gemini", "fake", "fake", "fake"]
+    with patch.dict("os.environ", {}, clear=True):
+        assert [s.judge.provider for s in judges.build_seats("live")] == ["fake"] * 4
+
+
+def test_probe_and_calibrate_see_real_judges_only():
+    env = {"GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-x"}
+    with patch.dict("os.environ", env, clear=True):
+        assert [(s.id, s.judge.provider) for s in judges.real_seats()] == [("augusta", "gemini")]
+    with patch.dict("os.environ", {}, clear=True):
+        assert judges.real_seats() == []  # nothing registered: no fakes to pad the result
+
+
 def test_fake_mode_is_repeatable():
     def run():
         with patch.object(judges, "_seats", judges.build_seats("fake")):
@@ -113,6 +141,26 @@ def test_fake_mode_is_repeatable():
         return r["totals"], [(e["p1"], e["p2"], e["vote"], e["remark"]) for e in r["emperors"]]
     first = run()
     assert first == run() and len(first[1]) == 4 and first[0] is not None
+
+
+def test_weights_scale_totals_and_flip_votes():
+    with patch.object(judges, "_seats", stub_seats()), patch.object(judges, "_chat", stub_chat):
+        r = judges.judge_round(TASK_ROUND, TASK, "ALPHA essay", "BETA essay", weights={"p1": 0.3})
+    # raw: 9 vs 3 from each of 3 Emperors; context rot makes p1 count 0.3x: 27 -> 8, and each vote flips
+    assert r["totals"] == {"p1": 8, "p2": 9} and {e["vote"] for e in r["emperors"]} == {"p2"}
+
+
+def test_an_empty_testimony_scores_zero():
+    with patch.object(judges, "_seats", stub_seats()), patch.object(judges, "_chat", stub_chat):
+        r = judges.judge_round(TASK_ROUND, TASK, "ALPHA essay", "   ")
+    assert all(e["p2"] == 0 for e in r["emperors"]) and r["totals"] == {"p1": 27, "p2": 0}
+    assert r["sweep"]["p2"] is False
+
+
+def test_fake_judges_need_no_picture_file():
+    offering = {"id": "nope", "file": "this-file-does-not-exist.jpg"}
+    with patch.object(judges, "_seats", judges.build_seats("fake")):
+        assert judges.judge_round(rounds.ROUNDS[0], offering, "a", "b")["totals"] is not None
 
 
 def test_choice_round_has_no_judges():

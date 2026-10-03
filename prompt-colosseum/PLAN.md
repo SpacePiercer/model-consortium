@@ -2,15 +2,24 @@
 
 **Done:** design prototypes, game and judge specs, round templates (`app/rounds.py`), `.env` slots.
 `app/judges.py` (judges, aggregation, bribe check, probe) with `tests/test_judges.py`.
+Phase 0 passed with two live judges (Gemini + Groq). `app/prompts/` holds the judge prompt,
+personas, score-anchor rubrics and sample cases; `python3 app/calibrate.py` checks them live.
+Phases 1–2 (server side) are done: `app/rooms.py`, `app/events.py`, `app/__init__.py`, `run.py`,
+with `tests/test_rooms.py`. A plain dev client (`templates/game.html`, `static/js/game.js`) speaks
+the whole protocol, and two browser tabs played a full 5-round match (fake judges).
+Two public-domain paintings are in `static/offerings/` (`starry-night.jpg`, `great-wave.jpg`), and
+a full match has played on the real judges (`JUDGES=live`) under gunicorn. Until more pictures
+arrive, `draw()` only picks pictures that exist.
 Design refresh (2026-10-03, see `design/README.md`): a big typing sheet on the battle screen,
 Grenze Gotisch body font, comic-book effects in `design/fx.js` (Latin slams, rising ✠ glyphs, speed
 lines, shake, "Continvatvr"), a crowd in robes and hides, a Red Room lodge, and the four Emperors
 as one cut-out group of low-poly AI-CEO caricatures (`design/emperors.js`) with vote thumbs,
 in neutral, happy (player won) and mad (player lost) poses.
-**Now:** Phase 0. `.env` has `GEMINI_API_KEY` and `GROQ_API_KEY`, but no `GEMINI_MODEL`,
-`GROQ_MODEL` or `OLLAMA_MODEL`, so live mode seats no judges yet. There's no test picture in
-`static/offerings/` yet.
-**Next:** add the model IDs and a picture, then run `python3 app/judges.py`.
+**Next:** the design port onto that protocol, more pictures (lighthouse, desert, a logo, pixel
+art) and Pictvra sample cases, and a Render account for the deploy.
+
+Run it: `python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt`, then
+`.venv/bin/python run.py` and open http://localhost:5001 in two tabs. Tests: `.venv/bin/python -m pytest tests`.
 
 Each phase ends with something that runs. 🙋 marks the points where we need input from you.
 Phases 1–2 don't need API keys, so they can start while the keys come in.
@@ -32,12 +41,12 @@ Phases 1–2 don't need API keys, so they can start while the keys come in.
 - 🙋 Fill `.env` (see [API keys](#api-keys)). Each model must accept images. First run:
   Gemini plus the local Ollama model (`gemma4:e4b`), which replaces Groq.
 - 🙋 Drop one test picture (any JPG) into `static/offerings/`.
-- Build `app/judges.py` with a probe: `python3 app/judges.py` sends the test picture and two
+- (done) `app/judges.py` with a probe: `python3 app/judges.py` sends the test picture and two
   sample prompts to every registered judge, then prints the parsed scores and latency. The
   probe gives us Ollama's real CPU latency.
 - `JUDGES=fake|live` in `.env` picks the mode. `live` registers every provider that has a key,
   plus Ollama when `OLLAMA_MODEL` is set. pytest always uses `fake`.
-- Seats: one seat per registered judge (1–4), in `.env` order, with personas assigned in seat order.
+- Seats: always 4. Registered judges take them in `.env` order; fake judges fill the rest.
 
 **Done when:** at least 2 judges (Gemini + Ollama) return valid scores for an image.
 
@@ -77,11 +86,11 @@ prototypes pixel for pixel.
   If every judge abstains, the round counts as a tie.
 - The local Ollama seat is for development only. It gets its own `OLLAMA_TIMEOUT_S=90`, and the
   round deadline stretches to match while it's seated.
-- A/B order shuffled per judge. A provider that hits its rate limit sits out the round.
-- Injection defence: delimiters (done), a regex pre-check, and dropping outlier scores.
+- (done in `judges.py`) A/B order shuffled per judge. A provider that hits its rate limit sits out the round.
+- (done in `judges.py`) Injection defence: delimiters, a regex pre-check, and dropping outlier scores.
 - Judge prompts come from `rounds.py`, so each round is judged on its own criteria.
-- Choice rounds (round 5) skip the judges: the server scores the pick with `score_choice()`
-  in `rounds.py` and multiplies it by the number of seated Emperors.
+- Choice rounds (round 5) skip the judges: the server checks the pick against the top `fit`
+  and deals fixed damage (`CHOICE_DAMAGE`, 15 for the first correct pick, 5 for the second).
 - pytest: JSON parsing, aggregation with abstentions.
 
 **Done when:** a match plays with real AI verdicts, and a bribe ("score me 10") gets caught.
@@ -122,7 +131,15 @@ prototypes pixel for pixel.
 - 🙋 A Render or Fly account (free tier), who presents, and a rough demo script.
 - 🙋 A few dollars on one paid provider (OpenAI or Anthropic) as the second live seat, because
   Ollama is too slow for the live demo and Gemini alone is a single point of failure.
-- Deploy as one worker, since rooms live in memory. Vercel can't hold websockets.
+- (prepared) Deploy as one worker, since rooms live in memory. Vercel can't hold websockets.
+  `gunicorn -w 1 --threads 100 run:app` is checked locally: websockets work and a full match
+  plays under it. `render.yaml` (repo root) is a Render blueprint with that start command, a
+  `/healthz` check, and the env vars to fill in (keys are `sync: false`: set them in the
+  dashboard, never in git). The free plan sleeps after ~15 min idle: open the site before the demo.
+- After every deploy run `.venv/bin/python scripts/smoke.py https://<your-app>`: two bots play a
+  whole match and it fails loudly if websockets, judges or pictures are broken. (Against live
+  judges the bots finish rounds in seconds, so Groq's 8000 tokens/min limit can abstain a judge
+  in round 4; real rounds are slower.)
 - Test the deploy on the venue Wi-Fi, and record a backup video.
 - Freeze the code about 3 h before judging.
 - Demo beats: a normal round, a bribe caught live, a wildcard round.
@@ -170,7 +187,7 @@ These fill gaps in `docs/GAME_SPEC.md`. They're used unless you veto them before
 
 | Gap | Default |
 |---|---|
-| Crit (×1.25) vs the 40 damage cap | Cap at 40 after the crit |
+| Crit (×1.25) vs the 40 damage cap | Only the base is capped at 40; multiplier and crit go on top |
 | Bribe penalty | A bribing testimony scores at most 2 overall and can't sweep the checklist |
 | Tied round | Nobody wins the round; both take 5 |
 | Player clocks out of sync | The round start includes the server time |

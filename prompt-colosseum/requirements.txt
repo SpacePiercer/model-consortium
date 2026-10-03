@@ -1,0 +1,7 @@
+flask
+flask-socketio
+simple-websocket
+httpx
+python-dotenv
+gunicorn
+pytest

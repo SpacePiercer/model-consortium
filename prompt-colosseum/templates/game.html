@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt Colosseum</title>
+<style>
+  body { font: 15px/1.45 system-ui, sans-serif; background: #16110d; color: #efe6d2; max-width: 800px; margin: 0 auto; padding: 16px; }
+  h1, h2, h3 { font-weight: 600; margin: 12px 0 6px; }
+  section { border: 1px solid #5a4632; padding: 12px; margin: 12px 0; }
+  input, textarea, button { font: inherit; padding: 6px 10px; background: #0e0a08; color: #f0d9a0; border: 1px solid #8a7556; }
+  button { background: #3a2c1c; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 110px; }
+  .dev { font-size: 12px; color: #b3a68c; border: 1px dashed #8a7556; padding: 6px; }
+  .p1 { color: #b6ff4a; } .p2 { color: #ff4fb0; } .bad { color: #ff3b30; } .dim { color: #b3a68c; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; } .row > * { flex: 1; min-width: 240px; }
+  .card { border: 1px solid #8a7556; padding: 8px; white-space: pre-wrap; }
+  #err { color: #ff3b30; min-height: 1.4em; }
+  #offering img { max-width: 100%; max-height: 260px; }
+  #cards button { margin: 4px 6px 4px 0; }
+</style>
+</head>
+<body>
+<p class="dev">Dev client: plain on purpose. The design port replaces this markup and keeps the socket
+protocol in docs/GAME_SPEC.md. Open two tabs to play against yourself.</p>
+<h1>Prompt Colosseum</h1>
+<div id="err" role="alert"></div>
+
+<section id="entry">
+  <h2>Enter the arena</h2>
+  <p><label>Name <input id="name" maxlength="16" placeholder="Gladiator"></label>
+     <button id="create">Create a room</button></p>
+  <p><label>Room code <input id="code" maxlength="4" size="6" placeholder="ABCD"></label>
+     <button id="join">Join</button></p>
+</section>
+
+<section id="room" hidden>
+  <div>Room <b id="roomcode"></b> &middot; <span id="phase"></span> &middot; round <span id="roundno">0</span>/5</div>
+  <div id="players" class="row"></div>
+  <p><button id="start" hidden>Start the match</button> <span id="wait" class="dim"></span>
+     <button id="yield" hidden>Yield</button></p>
+</section>
+
+<section id="round" hidden>
+  <h2 id="title"></h2>
+  <p id="brief"></p>
+  <p id="wild" class="bad"></p>
+  <p>Time left: <b id="timer"></b> &middot; <span id="opp" class="dim"></span></p>
+  <div id="offering"></div>
+  <div id="cards"></div>
+  <div id="write">
+    <textarea id="text" placeholder="Your testimonium"></textarea>
+    <span id="count" class="dim"></span> <button id="seal">Seal</button>
+  </div>
+</section>
+
+<section id="verdict" hidden>
+  <h2 id="vhead"></h2>
+  <p id="vtags"></p>
+  <div id="emperors"></div>
+  <div id="prompts" class="row"></div>
+  <p id="vbtn"><button id="compact">/compact</button> <button id="clear">/clear</button>
+     <button id="next">Next round</button></p>
+</section>
+
+<section id="end" hidden><h2 id="endhead"></h2><p id="endhp"></p></section>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/static/js/game.js"></script>
+</body>
+</html>

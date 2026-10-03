@@ -45,7 +45,7 @@ real game draw the actual offering image into it (nearest-neighbour downscale) a
 | Grenze Gotisch | Labels, body copy, small headings, buttons (readable blackletter) |
 | Jersey 10 | Gladiator names, JOIN |
 | Doto | Timer, HP, scores, character count |
-| Cinzel Decorative | Emperor names |
+| Cinzel Decorative | Emperor names, Latin slams (`fx.js`) |
 | Special Elite | Typed testimonies, paper labels |
 | Workbench | Model names, CRT captions |
 

@@ -48,13 +48,8 @@ DEADLINE = 20     # seconds for the whole panel; stretches if a seat has a longe
 BRIBE_CAP = 2     # a testimony caught bribing scores at most this overall
 OUTLIER_GAP = 6   # drop an Emperor this far from the panel median
 
-# Personas go to seats in order. Flavours are written for the picture round; harmless elsewhere.
-EMPERORS = [
-    ("augusta", "Avgvsta", "precise and cold; values composition and light"),
-    ("brutus", "Brvtvs", "a blunt soldier; values the obvious subject being right"),
-    ("cassia", "Cassia", "a mystic; values mood and colour"),
-    ("decimus", "Decimvs", "an old scholar; values medium and technique"),
-]
+# Personas go to seats in order. Their temperament lives in prompts/personas/<id>.md.
+EMPERORS = [("augusta", "Avgvsta"), ("brutus", "Brvtvs"), ("cassia", "Cassia"), ("decimus", "Decimvs")]
 
 # Seat priority order. (name, OpenAI-compatible base URL, key env, model env)
 PROVIDERS = [
@@ -72,7 +67,7 @@ QUIPS = [
     "The sand drinks the blood of the vague.",
     "A fair attempt, but the crowd yawns.",
     "Precision, at last. Rome approves.",
-    "Even in likeness. Even in craft.",
+    "Even in likeness. Even in clarity.",
 ]
 
 # Phrases aimed at the judge. "you are now" and "system prompt" are left out on purpose: the
@@ -106,6 +101,7 @@ class Judge:
     api_key: str = ""
     timeout: float = 15.0
     extra: dict = field(default_factory=dict)
+    max_tokens: int = 400  # providers count this against per-minute limits, so keep it small
     rng: object = None  # fake judges only
 
     @property
@@ -117,7 +113,6 @@ class Judge:
 class Seat:
     id: str
     name: str
-    flavour: str
     judge: Judge
 
 
@@ -134,6 +129,9 @@ def _live_judges():
         if not (key and model):
             continue
         extra = {}
+        tokens = 400
+        if name == "gemini":  # thinking spends max_tokens before the answer, so it needs headroom
+            extra, tokens = {"reasoning_effort": "low"}, 2048  # ponytail: "low" is fast enough
         if name == "cloudflare":
             if not os.getenv("CF_ACCOUNT_ID"):
                 continue
@@ -143,7 +141,7 @@ def _live_judges():
             model = models[0]
             if len(models) > 1:
                 extra = {"models": models}
-        out.append(Judge(name, model, url, key, float(os.getenv("JUDGE_TIMEOUT_S", "15")), extra))
+        out.append(Judge(name, model, url, key, float(os.getenv("JUDGE_TIMEOUT_S", "15")), extra, tokens))
     if os.getenv("OLLAMA_MODEL"):
         out.append(Judge("ollama", os.getenv("OLLAMA_MODEL"), "http://localhost:11434/v1", "ollama",
                          float(os.getenv("OLLAMA_TIMEOUT_S", "90"))))
@@ -152,12 +150,17 @@ def _live_judges():
 
 def build_seats(mode=None):
     mode = mode or os.getenv("JUDGES", "fake")
-    if mode == "fake":
-        seed = int(os.getenv("FAKE_SEED", "0"))
-        judges = [Judge("fake", "fake", rng=random.Random(seed + i)) for i in range(4)]
-    else:
-        judges = _live_judges()
-    return [Seat(*EMPERORS[i], judge=j) for i, j in enumerate(judges[:4])]
+    seed = int(os.getenv("FAKE_SEED", "0"))
+    judges = [] if mode == "fake" else _live_judges()[:4]
+    # Fewer than 4 real judges: random-score fakes fill the empty thrones.
+    judges += [Judge("fake", "fake", rng=random.Random(seed + i)) for i in range(len(judges), 4)]
+    return [Seat(*EMPERORS[i], judge=j) for i, j in enumerate(judges)]
+
+
+def real_seats():
+    """Live judges only, without the fake fillers. For the probe and calibrate.py, where a fake
+    that always answers would make a broken setup look healthy."""
+    return [s for s in build_seats("live") if s.judge.provider != "fake"]
 
 
 def get_seats():
@@ -191,7 +194,7 @@ def _chat(judge, messages, json_mode):
     if time.monotonic() < _cool.get(judge.provider, 0):
         raise RateLimited("cooling down after a rate limit")
     body = {"model": judge.model, "messages": messages, "temperature": 0.2,
-            "max_tokens": int(os.getenv("JUDGE_MAX_TOKENS", "400")), **judge.extra}
+            "max_tokens": int(os.getenv("JUDGE_MAX_TOKENS") or judge.max_tokens), **judge.extra}
     if json_mode:
         body["response_format"] = {"type": "json_object"}
     r = httpx.post(judge.base_url + "/chat/completions", json=body, timeout=judge.timeout,
@@ -202,10 +205,13 @@ def _chat(judge, messages, json_mode):
         except ValueError:
             wait_s = 60
         _cool[judge.provider] = time.monotonic() + min(wait_s, 120)
-        raise RateLimited("HTTP 429")
+        raise RateLimited("HTTP 429: " + r.text[:160].replace("\n", " "))
     if r.status_code >= 400:
         raise JudgeError("HTTP %d: %s" % (r.status_code, r.text[:200]))
-    return r.json()["choices"][0]["message"]["content"]
+    choice = r.json()["choices"][0]
+    if choice.get("finish_reason") == "length":  # thinking models spend max_tokens before answering
+        raise JudgeError("reply cut off at max_tokens; raise it (JUDGE_MAX_TOKENS in .env overrides)")
+    return choice["message"]["content"]
 
 
 def _ask(judge, system, content):
@@ -237,7 +243,7 @@ def _image_url(file):
 
 def _blank(seat, error=None):
     return {"id": seat.id, "name": seat.name, "model": seat.judge.label, "p1": None, "p2": None,
-            "vote": None, "remark": "", "ms": 0, "error": error}
+            "vote": None, "remark": "", "ms": 0, "error": error, "fake": seat.judge.provider == "fake"}
 
 
 def _emperor(seat, rnd, offering, p1, p2, wildcard, image):
@@ -252,7 +258,7 @@ def _emperor(seat, rnd, offering, p1, p2, wildcard, image):
                 n = len(offering["checklist"])
                 got["cl_A"], got["cl_B"] = rng.randint(0, n), rng.randint(0, n)
         else:
-            system = rounds.system_prompt(rnd, "%s (%s)" % (seat.name, seat.flavour), wildcard)
+            system = rounds.system_prompt(rnd, "%s (%s)" % (seat.name, rounds.persona_for(seat.id)), wildcard)
             got = _ask(judge, system, _content(rounds.user_text(offering, a, b), image))
         e["p1"], e["p2"] = (got["B"], got["A"]) if flip else (got["A"], got["B"])
         e["remark"] = got["remark"]
@@ -271,7 +277,8 @@ def flagged(text):
 
 
 def drop_outliers(emps):
-    ok = [e for e in emps if e["p1"] is not None]
+    # random fillers neither move the median nor get dropped: they would only knock out real judges
+    ok = [e for e in emps if e["p1"] is not None and not e.get("fake")]
     if len(ok) < 3:  # a median of two judges means nothing
         return
     med = {p: statistics.median([e[p] for e in ok]) for p in ("p1", "p2")}
@@ -281,13 +288,14 @@ def drop_outliers(emps):
             e["error"] = "outlier"
 
 
-def aggregate(emps):
-    """(totals scaled to the full panel, unanimous) or (None, False) if everyone abstained."""
+def aggregate(emps, weights=None):
+    """(totals scaled to the full panel, unanimous) or (None, False) if everyone abstained.
+    `weights` ({"p1": 0.8}) scales a player's total, e.g. for context rot."""
     got = [e for e in emps if e["vote"] is not None]
     if not got:
         return None, False
-    k = len(emps) / len(got)
-    totals = {p: int(sum(e[p] for e in got) * k + 0.5) for p in ("p1", "p2")}
+    k, w = len(emps) / len(got), weights or {}
+    totals = {p: int(sum(e[p] for e in got) * k * w.get(p, 1) + 0.5) for p in ("p1", "p2")}
     return totals, len({e["vote"] for e in got}) == 1 and got[0]["vote"] != "tie"
 
 
@@ -302,7 +310,7 @@ def sweep(emps, offering):
     return out
 
 
-def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None):
+def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None, weights=None):
     if rnd["kind"] == "choice":
         raise ValueError("choice rounds have no judges; score them with rounds.score_choice")
     seats = get_seats()
@@ -310,7 +318,9 @@ def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None):
         seats = [s for s, on in zip(seats, list(seated) + [True] * len(seats)) if on]
     if not seats:
         raise RuntimeError("no judges seated: use JUDGES=fake or add API keys to .env")
-    image = _image_url(offering["file"]) if "file" in offering else None
+    # fake judges never look at the picture, so don't require the file to exist for them
+    real = any(s.judge.provider != "fake" for s in seats)
+    image = _image_url(offering["file"]) if "file" in offering and real else None
     pool = ThreadPoolExecutor(max_workers=len(seats))
     futs = [pool.submit(_emperor, s, rnd, offering, p1, p2, wildcard, image) for s in seats]
     done, _ = wait(futs, timeout=max(DEADLINE, max(s.judge.timeout for s in seats) + 5))
@@ -318,17 +328,25 @@ def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None):
     emps = [f.result() if f in done else _blank(s, "deadline") for f, s in zip(futs, seats)]
 
     flags = {"p1": flagged(p1), "p2": flagged(p2)}
+    empty = {"p1": not p1.strip(), "p2": not p2.strip()}  # an empty testimony scores 0
+    w = {"p1": 1, "p2": 1, **(weights or {})}
     drop_outliers(emps)  # on raw scores, so a judge that fell for a bribe is the one dropped
+    for e in emps:
+        if e["error"]:  # the server log is the only place these show up; the clients just see an abstention
+            print("[judges] %s (%s) abstained: %s" % (e["name"], e["model"], e["error"]), flush=True)
     for e in emps:
         if e["p1"] is None:
             continue
         for p in flags:
             if flags[p]:
                 e[p] = min(e[p], BRIBE_CAP)
-        e["vote"] = "p1" if e["p1"] > e["p2"] else "p2" if e["p2"] > e["p1"] else "tie"
-    totals, unanimous = aggregate(emps)
+            if empty[p]:
+                e[p] = 0
+        a, b = e["p1"] * w["p1"], e["p2"] * w["p2"]
+        e["vote"] = "p1" if a > b else "p2" if b > a else "tie"
+    totals, unanimous = aggregate(emps, w)
     swept = sweep(emps, offering)
-    swept = {p: swept[p] and not flags[p] for p in swept}
+    swept = {p: swept[p] and not flags[p] and not empty[p] for p in swept}
     return {"emperors": emps, "totals": totals, "unanimous": unanimous, "flagged": flags,
             "sweep": swept}
 
@@ -337,7 +355,7 @@ def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None):
 
 def probe(argv):
     global _seats
-    _seats = build_seats("live")
+    _seats = real_seats()
     judges = _live_judges()
     print("Registered judges (the probe always runs live):")
     for i, j in enumerate(judges):
@@ -350,7 +368,7 @@ def probe(argv):
                 name, key_env, model_env, " and CF_ACCOUNT_ID" if name == "cloudflare" else ""))
     if "ollama" not in have:
         print("  skipped ollama     set OLLAMA_MODEL")
-    if not _seats:
+    if not judges:
         sys.exit("\nNo judges registered. Fill in .env first.")
 
     pics = [p for p in sorted(OFFERINGS.glob("*")) if p.suffix.lower() in (".jpg", ".jpeg", ".png")]

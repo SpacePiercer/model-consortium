@@ -4,7 +4,7 @@
 
 1. **Lobby.** A player creates a room (gets a 4-letter code) or joins one. The match is always
    the 5 rounds below, with fixed time and length limits. The Emperors seated are the judges
-   registered on the server (1-4, see `docs/JUDGES.md`).
+   registered on the server, topped up to 4 with random-score fakes (see `docs/JUDGES.md`).
 2. **Round start.** Server picks an unused offering and broadcasts it. The timer starts on the
    server. Both players type their "testimonium", up to the round's character limit.
 3. **Seal.** A player presses Seal to lock their prompt. The opponent only sees that it is
@@ -54,13 +54,15 @@ a `checklist` count on rounds 2–4, and one one-line remark.
 - Both players start at 100 HP. Nobody drops below 1 HP before round 5 (a last stand).
 - `margin = abs(total_p1 - total_p2)` (after scaling, rounded).
 - Loser takes `min(40, 10 + 3 * margin) * damage_mult` (the round's multiplier from the table).
-- Unanimous verdict (every answering Emperor voted the same way) is a crit: damage × 1.25, cap 40.
+  Only the base is capped at 40; there is no final cap, so later rounds really hit harder.
+- Unanimous verdict (every answering Emperor voted the same way) is a crit: damage × 1.25 on top.
+  Round 4's maximum is 40 × 1.5 × 1.25 = 75.
 - Exact tie in totals: both take 5.
 - Round 5 (no judges): a correct first pick deals 15 damage to the opponent, a correct second
   pick deals 5, a wrong pick deals 0. "Correct" means a pick with the top `fit` score for the
   task (`score_choice` in `app/rounds.py`). Fastest correct pick is first.
 
-Example from the design: totals 26 vs 33, margin 7, damage 10 + 21 = 31, HP 72 → 41.
+Example (round 1, x1.0): totals 26 vs 33, margin 7, damage 10 + 21 = 31, HP 72 → 41.
 
 ## Healing and the context bar
 
@@ -80,35 +82,41 @@ Client → server
 
 | event | payload |
 |---|---|
-| `room:create` | `{ name, settings }` |
+| `room:create` | `{ name }` |
 | `room:join` | `{ code, name }` |
+| `room:start` | `{}` (host, once both players are in; starts the countdown) |
+| `room:rejoin` | `{ code, playerId }` (after a refresh or a dropped connection, within the grace) |
 | `round:draft` | `{ text }` (optional, throttled; lets the server auto-submit on time-out) |
 | `round:seal` | `{ text }` |
 | `round:choose` | `{ model }` (round 5 only; a key of `MODELS`) |
 | `context:reset` | `{ mode: "compact" \| "clear" }` (verdict screen, once per round) |
 | `round:next` | `{}` |
+| `match:yield` | `{}` (give up: the opponent wins the match at once) |
 
 Server → client
 
 | event | payload |
 |---|---|
-| `room:state` | `{ code, players: [{ id, name, hp, connected }], settings, phase }` |
-| `round:start` | `{ round, offering: { id, url }, endsAt }` (endsAt = server epoch ms) |
+| `room:joined` | `{ code, you, token, name }` (private, to a new or rejoining player: `you` is `"p1"` or `"p2"`, and `token` is the `playerId` that `room:rejoin` needs; nobody else ever sees it) |
+| `room:state` | `{ code, players: [{ id, name, hp, connected, context }], phase, round, rounds }` (`id` is the public slot `"p1"` / `"p2"`, the same keys the verdict uses; `context` is the bar, 0 to 1) |
+| `round:start` | `{ round, kind, title, brief, maxChars, endsAt, serverNow, offering: { id, url \| task }, options, optionLabels, wildcard }` (endsAt and serverNow = server epoch ms, so the client can correct for clock skew; `options` = 4 model keys and `optionLabels` their names, round 5 only; `wildcard` = `{ id, title, rule }` or null). Sent again to a rejoining player with `you: { text, pick }` and `sealed: { p1, p2 }` added. |
 | `round:sealed` | `{ playerId, at }` |
 | `round:judging` | `{}` |
 | `round:verdict` | see below |
-| `match:end` | `{ winnerId, final: [{ id, hp }] }` |
+| `match:end` | `{ winnerId, reason: "hp" \| "yield" \| "disconnect", final: [{ id, hp }] }` (winnerId null = draw) |
 | `error` | `{ message }` |
 
 `round:verdict` payload:
 
 ```json
 {
-  "round": 3,
+  "round": 1,
   "totals": { "p1": 26, "p2": 33 },
   "loser": "p1",
   "damage": 31,
   "crit": false,
+  "flagged": { "p1": false, "p2": false },
+  "sweep": { "p1": false, "p2": true },
   "heal": { "p1": 0, "p2": 5 },
   "context": { "p1": 0.82, "p2": 0.55 },
   "hp": { "p1": 41, "p2": 58 },
@@ -120,19 +128,43 @@ Server → client
 }
 ```
 
+Extra verdict fields: `dmg` (`{ p1, p2 }`, the HP each player lost; `damage` is the larger one and
+`loser` the player who lost more, or null when equal), `forfeit` (`"p1"` or `"p2"`, only when a
+disconnect cost them the round), and in round 5 `picks` (the model each player chose), `correct`
+(the right pickers, fastest first) and `answer` (the top-fit model keys). In round 5 `prompts`
+holds the picked model's name and `emperors` is empty. A rotted player's scores (context bar above
+85%) count x0.8 in `totals` and in each Emperor's vote, while the per-Emperor numbers shown stay raw.
+
 ## Phases (per room)
 
 `lobby → countdown(3 s) → writing → judging → verdict → (writing | finished)`
 
 ## Edge cases
 
-- Disconnect during writing: 20 s grace to reconnect, then the round is forfeited
-  (opponent wins the round with max damage 40).
+- Disconnect (any phase): 20 s grace to `room:rejoin`. After that the player loses the current
+  round: 40 × the round's multiplier damage, no crit. If they are still gone when the next round
+  starts, they lose the match (`match:end` reason `disconnect`).
+- Yield: the player loses the match at once (`match:end` reason `yield`).
+- A lobby or countdown that loses a player (grace ran out) or everyone: the remaining player gets
+  an `error` ("The match was abandoned.") and the room is deleted.
+- `/compact` and `/clear` are accepted only on a verdict screen before round 5, once per player per
+  round. A pending `/clear` penalty is used up by the next sweep that would have healed.
 - Double seal: ignore after the first.
 - Seal after `endsAt`: reject; the server already auto-submitted the last draft.
 - Judges all fail: counts as a tie, both take 5 (no replay).
-- Rate limits: keep a per-provider token bucket; if a provider is cooling down, mark that
-  Emperor absent for the round rather than waiting.
+- Rate limits: after a 429 the provider cools down (its `retry-after`, at most 120 s) and that
+  Emperor abstains for the round rather than waiting.
+
+## Wildcards
+
+`WILDCARDS` in `app/rounds.py`. Each of rounds 2-4 has a 50% chance to draw one (never round 1
+or 5), shown on screen with the round brief and sent in `round:start`.
+
+- Rules the judges enforce (Brevitas, Sine Colore, Sine Nomine, Vna Sententia): the rule goes
+  into the Emperors' prompt, and a testimony that breaks it scores at most 3 overall.
+- Rules the game enforces: Clepsydra halves the round's time; Caecvs hides the offering after
+  10 s.
+- Wildcards are the one exception to the fixed per-round limits.
 
 ## Offerings
 

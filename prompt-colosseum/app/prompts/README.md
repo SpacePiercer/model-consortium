@@ -7,7 +7,7 @@ the new text (no restart). The code that stitches them together is `system_promp
 | File | What it is |
 |---|---|
 | `judge.md` | The judging procedure and prompt template. `{{placeholders}}` are filled per round: `persona`, `goal`, `rubric`, `guide`, `twist`, `count`, `keys`. Leave the JSON schema and the untrusted-input paragraph alone unless you know why. |
-| `personas/<id>.md` | One Emperor's temperament: what they prize, how they break ties, how their remark sounds. Ids: `augusta`, `brutus`, `cassia`, `decimus`. They shape tie-breaks and voice, never the rubric. |
+| `personas/<id>.md` | One Emperor's temperament: what they prize, how they break ties, how their remark sounds. Ids: `amodei`, `altman`, `zuckerberg`, `musk`. They shape tie-breaks and voice, never the rubric. |
 | `rubrics/<round>.md` | Score anchors (what a 2, a 5, a 9 looks like) for each criterion of that round, one `## criterion` section each. |
 | `rubrics/shared.md` | Anchors for `clarity`, `constraints`, `economy`, used when a round file has no section for that name. |
 | `cases/<round>.json` | Sample testimonies with the winner we expect: a test set for the judges. |

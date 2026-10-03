@@ -25,7 +25,7 @@ def test_every_criterion_has_score_anchors():
 def test_prompt_is_fully_filled_in():
     for rnd in JUDGED:
         for wildcard in (None, rounds.WILDCARDS[0]):
-            s = rounds.system_prompt(rnd, "Avgvsta (x)", wildcard)
+            s = rounds.system_prompt(rnd, "Amodei (x)", wildcard)
             assert "{{" not in s and "}}" not in s, rnd["id"]
             assert "HOW TO JUDGE" in s and "SCORING GUIDE" in s and "- 0-2:" not in s.split("SCORING")[0]
             assert ("twist" in s) == (wildcard is not None)

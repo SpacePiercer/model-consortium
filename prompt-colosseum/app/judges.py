@@ -51,7 +51,7 @@ BRIBE_CAP = 2     # a testimony caught bribing scores at most this overall
 OUTLIER_GAP = 6   # drop an Emperor this far from the panel median
 
 # Personas go to seats in order. Their temperament lives in prompts/personas/<id>.md.
-EMPERORS = [("augusta", "Avgvsta"), ("brutus", "Brvtvs"), ("cassia", "Cassia"), ("decimus", "Decimvs")]
+EMPERORS = [("amodei", "Amodei"), ("altman", "Altmanvs"), ("zuckerberg", "Zvckervs"), ("musk", "Mvscvs")]
 
 # Seat priority order. (name, OpenAI-compatible base URL, key env, model env)
 PROVIDERS = [

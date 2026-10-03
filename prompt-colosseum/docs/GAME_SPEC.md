@@ -123,7 +123,7 @@ Server → client
   "hp": { "p1": 41, "p2": 58 },
   "prompts": { "p1": "...", "p2": "..." },
   "emperors": [
-    { "id": "augusta", "name": "Avgvsta", "model": "gemini flash",
+    { "id": "amodei", "name": "Amodei", "model": "gemini flash",
       "p1": 6, "p2": 9, "vote": "p2", "remark": "Both found the moon. Only one found the lens." }
   ]
 }

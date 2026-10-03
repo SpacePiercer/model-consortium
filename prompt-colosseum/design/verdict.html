@@ -12,6 +12,22 @@ a{color:#F6D9C8}a:hover{color:#FFFFFF}
 @keyframes shake{0%,100%{transform:translate(0,0)}25%{transform:translate(-3px,2px)}50%{transform:translate(3px,-2px)}75%{transform:translate(-2px,-1px)}}
 .blink{animation:blink 0.5s steps(1) infinite}
 .shake{animation:shake 0.25s steps(2) infinite}
+/* HP bar: enamel cells in a riveted iron plate, with scanlines (the medieval-cyberpunk mix) */
+.hp{--sk:-14deg;--c:#88A646;--hi:#C9D98C;--lo:#3F5A22;--off:#1E2117;--glow:rgba(150,190,80,.3);
+  position:relative;align-self:flex-start;display:flex;gap:3px;margin-top:6px;padding:5px 13px;border:2px solid #4E3F2A;border-radius:2px;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.025) 0 1px,transparent 1px 4px),linear-gradient(180deg,#2E2925 0%,#1A1613 55%,#0E0B09 100%);
+  box-shadow:inset 0 1px 0 rgba(236,214,170,.16),inset 0 -2px 0 rgba(0,0,0,.7),0 0 0 1px #0B0807,0 3px 0 1px rgba(0,0,0,.6)}
+.hp-p2{--sk:14deg;--c:#B04A72;--hi:#E7A6BE;--lo:#5E1C36;--off:#22171B;--glow:rgba(210,90,140,.3);align-self:flex-end}
+.hp::before,.hp::after{content:'';position:absolute;top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#E2C88E,#7A6040 60%,#2A2016)}
+.hp::before{left:3px}.hp::after{right:3px}
+.hp i{width:16px;height:18px;transform:skewX(var(--sk));box-shadow:inset 0 0 0 1px rgba(0,0,0,.65);
+  background:repeating-linear-gradient(180deg,rgba(0,0,0,.35) 0 1px,transparent 1px 3px),linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.3)),var(--off)}
+.hp i:nth-child(5n):not(:last-child){margin-right:5px}
+.hp i.on{background:repeating-linear-gradient(180deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px),linear-gradient(180deg,var(--hi) 0%,var(--c) 38%,var(--lo) 100%);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.25),0 0 5px var(--glow)}
+.hp i.lost{background:repeating-linear-gradient(180deg,rgba(0,0,0,.25) 0 1px,transparent 1px 3px),linear-gradient(180deg,#F2DDB0 0%,#D0763E 50%,#7A2416 100%);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),0 0 6px rgba(230,90,40,.5);animation:blink .5s steps(1) infinite}
 </style>
 <style>
 html,body{height:100%;overflow:hidden;background:#000}
@@ -29,61 +45,19 @@ html,body{height:100%;overflow:hidden;background:#000}
 <div style="position: absolute; left: 40px; top: 18px; width: 470px; display: flex; flex-direction: column; gap: 4px">
 <div style="display: flex; justify-content: space-between; align-items: baseline">
 <span style="font-size: 20px; color: #C9B48A; text-shadow: 0 2px 0 #000">Gladiator the First</span>
-<span style="font-family: 'Doto', monospace; font-weight: 900; font-size: 32px; color: #B6FF4A; text-shadow: 0 0 10px rgba(182,255,74,0.6)">041</span>
+<span style="font-family: 'Doto', monospace; font-weight: 900; font-size: 32px; color: #C3D68A; text-shadow: 0 2px 0 #000, 0 0 6px rgba(150,190,80,0.35)">041</span>
 </div>
 <div style="font-family: 'Jersey 10', sans-serif; font-size: 54px; line-height: 0.85; letter-spacing: 1px; color: #F6F0DE; text-shadow: 3px 3px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000, 0 0 18px rgba(182,255,74,0.55)">VOVA_THE_BOLD</div>
-<div style="display: flex; gap: 5px; padding-left: 4px; margin-top: 6px">
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: #B6FF4A; box-shadow: 0 0 7px #B6FF4A"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: #B6FF4A; box-shadow: 0 0 7px #B6FF4A"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: #B6FF4A; box-shadow: 0 0 7px #B6FF4A"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: #B6FF4A; box-shadow: 0 0 7px #B6FF4A"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: #B6FF4A; box-shadow: 0 0 7px #B6FF4A"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: #B6FF4A; box-shadow: 0 0 7px #B6FF4A"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: #B6FF4A; box-shadow: 0 0 7px #B6FF4A"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: #B6FF4A; box-shadow: 0 0 7px #B6FF4A"></div>
-<div class="blink" style="width: 17px; height: 20px; transform: skewX(-16deg); background: #F5E6C8; box-shadow: 0 0 8px #FF3B30"></div>
-<div class="blink" style="width: 17px; height: 20px; transform: skewX(-16deg); background: #F5E6C8; box-shadow: 0 0 8px #FF3B30"></div>
-<div class="blink" style="width: 17px; height: 20px; transform: skewX(-16deg); background: #F5E6C8; box-shadow: 0 0 8px #FF3B30"></div>
-<div class="blink" style="width: 17px; height: 20px; transform: skewX(-16deg); background: #F5E6C8; box-shadow: 0 0 8px #FF3B30"></div>
-<div class="blink" style="width: 17px; height: 20px; transform: skewX(-16deg); background: #F5E6C8; box-shadow: 0 0 8px #FF3B30"></div>
-<div class="blink" style="width: 17px; height: 20px; transform: skewX(-16deg); background: #F5E6C8; box-shadow: 0 0 8px #FF3B30"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: rgba(182,255,74,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: rgba(182,255,74,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: rgba(182,255,74,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: rgba(182,255,74,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: rgba(182,255,74,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(-16deg); background: rgba(182,255,74,0.13); box-shadow: none"></div>
-</div>
+<div class="hp"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="lost"></i><i class="lost"></i><i class="lost"></i><i class="lost"></i><i class="lost"></i><i class="lost"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 </div>
 
 <div style="position: absolute; right: 40px; top: 18px; width: 470px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px">
 <div style="width: 100%; display: flex; justify-content: space-between; align-items: baseline">
-<span style="font-family: 'Doto', monospace; font-weight: 900; font-size: 32px; color: #FF4FB0; text-shadow: 0 0 10px rgba(255,79,176,0.6)">058</span>
+<span style="font-family: 'Doto', monospace; font-weight: 900; font-size: 32px; color: #E4A0BC; text-shadow: 0 2px 0 #000, 0 0 6px rgba(200,80,130,0.35)">058</span>
 <span style="font-size: 20px; color: #C9B48A; text-shadow: 0 2px 0 #000">Gladiator the Second</span>
 </div>
 <div style="font-family: 'Jersey 10', sans-serif; font-size: 54px; line-height: 0.85; letter-spacing: 1px; color: #F6F0DE; text-shadow: 3px 3px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000, 0 0 18px rgba(255,79,176,0.55)">NEROLAX</div>
-<div style="display: flex; gap: 5px; padding-right: 4px; margin-top: 6px">
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: rgba(255,79,176,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: rgba(255,79,176,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: rgba(255,79,176,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: rgba(255,79,176,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: rgba(255,79,176,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: rgba(255,79,176,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: rgba(255,79,176,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: rgba(255,79,176,0.13); box-shadow: none"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-<div style="width: 17px; height: 20px; transform: skewX(16deg); background: #FF4FB0; box-shadow: 0 0 7px #FF4FB0"></div>
-</div>
+<div class="hp hp-p2"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
 </div>
 
 <div style="position: absolute; left: 520px; top: 12px; width: 400px; display: flex; flex-direction: column; align-items: center; gap: 4px">
@@ -122,16 +96,16 @@ html,body{height:100%;overflow:hidden;background:#000}
 <div style="padding: 10px 20px 12px; display: flex; flex-direction: column; gap: 7px; background: linear-gradient(90deg, #D9CDAE 0%, #EDE4CC 12%, #EDE4CC 88%, #D9CDAE 100%); box-shadow: inset 0 0 22px rgba(120,90,40,0.25)">
 <h2 style="margin: 0; text-align: center; font-weight: 700; font-size: 30px; line-height: 1; color: #5A1A12">Acta Imperatorum</h2>
 <div style="display: grid; grid-template-columns: 112px 52px minmax(0, 1fr); align-items: baseline; gap: 4px 10px; color: #1d1a16">
-<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 14px; color: #2A1F15">Avgvsta</span>
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 14px; color: #2A1F15">Amodei</span>
 <span style="font-family: 'Doto', monospace; font-weight: 900; font-size: 16px"><span style="color: #2E6A10">6</span>·<span style="color: #A0145E">9</span></span>
 <span style="font-family: 'Special Elite', monospace; font-size: 15px">“Both found the moon. Only one found the lens.”</span>
-<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 14px; color: #2A1F15">Brvtvs</span>
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 14px; color: #2A1F15">Altmanvs</span>
 <span style="font-family: 'Doto', monospace; font-weight: 900; font-size: 16px"><span style="color: #2E6A10">7</span>·<span style="color: #A0145E">8</span></span>
 <span style="font-family: 'Special Elite', monospace; font-size: 15px">“The rival saw the fog. The fog matters.”</span>
-<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 14px; color: #2A1F15">Cassia</span>
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 14px; color: #2A1F15">Zvckervs</span>
 <span style="font-family: 'Doto', monospace; font-weight: 900; font-size: 16px"><span style="color: #2E6A10">7</span>·<span style="color: #A0145E">7</span></span>
 <span style="font-family: 'Special Elite', monospace; font-size: 15px">“Even in likeness. Even in clarity.”</span>
-<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 14px; color: #2A1F15">Decimvs</span>
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 14px; color: #2A1F15">Mvscvs</span>
 <span style="font-family: 'Doto', monospace; font-weight: 900; font-size: 16px"><span style="color: #2E6A10">6</span>·<span style="color: #A0145E">9</span></span>
 <span style="font-family: 'Special Elite', monospace; font-size: 15px">“A photograph was offered, and only one saw it.”</span>
 </div>

@@ -1,7 +1,8 @@
 # Prompt Colosseum: build plan
 
 **Done:** design prototypes, game and judge specs, round templates (`app/rounds.py`), `.env` slots.
-**Next:** Phase 0.
+`app/judges.py` (judges, aggregation, bribe check, probe) with `tests/test_judges.py`.
+**Next:** Phase 0: fill `.env`, then run `python3 app/judges.py`.
 
 Each phase ends with something that runs. 🙋 marks the points where we need input from you.
 Phases 1–2 don't need API keys, so they can start while the keys come in.

@@ -4,7 +4,7 @@
 
 1. **Lobby.** A player creates a room (gets a 4-letter code) or joins one. The match is always
    the 5 rounds below, with fixed time and length limits. The Emperors seated are the judges
-   registered on the server (1-4, see `docs/JUDGES.md`).
+   registered on the server, topped up to 4 with random-score fakes (see `docs/JUDGES.md`).
 2. **Round start.** Server picks an unused offering and broadcasts it. The timer starts on the
    server. Both players type their "testimonium", up to the round's character limit.
 3. **Seal.** A player presses Seal to lock their prompt. The opponent only sees that it is

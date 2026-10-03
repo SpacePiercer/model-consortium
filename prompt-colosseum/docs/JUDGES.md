@@ -1,13 +1,13 @@
 # The Emperors (AI judges)
 
-One to four seats, one per registered judge, each a different vision-capable model behind a
+Always four seats. Each real judge is a different vision-capable model behind a
 different free tier, so the panel is diverse and rate limits are spread out. Free tiers change
 often; check each provider's current model list and limits before wiring a model ID.
 
 `JUDGES=fake|live` in `.env` picks the mode. `fake` (the default, and always in pytest) seats
 judges that return random scores from a seeded RNG. `live` registers every provider that has a
-key, plus Ollama when `OLLAMA_MODEL` is set, in `.env` order; personas go to seats in table
-order. The arena draws only as many thrones as there are seats.
+key, plus Ollama when `OLLAMA_MODEL` is set, in `.env` order (at most 4); personas go to seats
+in that order. Seats left empty are filled with random-score fake judges, so the panel is always 4.
 
 | Seat | Persona | Provider | OpenAI-compatible base URL (verify) |
 |---|---|---|---|

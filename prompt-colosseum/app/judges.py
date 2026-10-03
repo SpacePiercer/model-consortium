@@ -156,12 +156,11 @@ def _live_judges():
 
 def build_seats(mode=None):
     mode = mode or os.getenv("JUDGES", "fake")
-    if mode == "fake":
-        seed = int(os.getenv("FAKE_SEED", "0"))
-        judges = [Judge("fake", "fake", rng=random.Random(seed + i)) for i in range(4)]
-    else:
-        judges = _live_judges()
-    return [Seat(*EMPERORS[i], judge=j) for i, j in enumerate(judges[:4])]
+    seed = int(os.getenv("FAKE_SEED", "0"))
+    judges = [] if mode == "fake" else _live_judges()[:4]
+    # Fewer than 4 real judges: random-score fakes fill the empty thrones.
+    judges += [Judge("fake", "fake", rng=random.Random(seed + i)) for i in range(len(judges), 4)]
+    return [Seat(*EMPERORS[i], judge=j) for i, j in enumerate(judges)]
 
 
 def get_seats():
@@ -357,7 +356,7 @@ def probe(argv):
                 name, key_env, model_env, " and CF_ACCOUNT_ID" if name == "cloudflare" else ""))
     if "ollama" not in have:
         print("  skipped ollama     set OLLAMA_MODEL")
-    if not _seats:
+    if not judges:
         sys.exit("\nNo judges registered. Fill in .env first.")
 
     pics = [p for p in sorted(OFFERINGS.glob("*")) if p.suffix.lower() in (".jpg", ".jpeg", ".png")]

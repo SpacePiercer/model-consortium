@@ -29,7 +29,7 @@ Phases 1–2 don't need API keys, so they can start while the keys come in.
   probe gives us Ollama's real CPU latency.
 - `JUDGES=fake|live` in `.env` picks the mode. `live` registers every provider that has a key,
   plus Ollama when `OLLAMA_MODEL` is set. pytest always uses `fake`.
-- Seats: one seat per registered judge (1–4), in `.env` order, with personas assigned in seat order.
+- Seats: always 4. Registered judges take them in `.env` order; fake judges fill the rest.
 
 **Done when:** at least 2 judges (Gemini + Ollama) return valid scores for an image.
 
@@ -38,8 +38,7 @@ Phases 1–2 don't need API keys, so they can start while the keys come in.
   pytest) and a venv.
 - One page, `templates/game.html`, with lobby, battle and verdict sections ported from the
   prototypes. Socket.IO keeps one connection across phases.
-- `static/js/arena.js` (adds the `dither` export, and draws only as many thrones as there are
-  seats), `static/css/theme.css`.
+- `static/js/arena.js` (adds the `dither` export), `static/css/theme.css`.
 - A launch config so the app runs in the preview pane.
 
 **Done when:** the app serves the lobby, and switching phases flips screens that match the

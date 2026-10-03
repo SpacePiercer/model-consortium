@@ -1,0 +1,36 @@
+/* Shared rules from the design prototypes (design/*.html). Layout stays inline in game.html. */
+html, body { height: 100%; overflow: hidden; margin: 0; background: #000; }
+#frame { position: absolute; left: 50%; top: 50%; width: 1440px; height: 810px; transform-origin: center center; }
+a { color: #F6D9C8; } a:hover { color: #FFFFFF; }
+input::placeholder { color: #6E5E46; }
+textarea::selection { background: #5A1A12; color: #F1EAD6; }
+[hidden] { display: none !important; }
+.screen { position: absolute; left: 0; top: 0; width: 1440px; height: 810px; }
+
+@keyframes roll { 0% { transform: translateY(-80px); } 100% { transform: translateY(240px); } }
+@keyframes blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0.12; } }
+@keyframes hum { 0%, 100% { opacity: 1; } 47% { opacity: 0.86; } 50% { opacity: 1; } 83% { opacity: 0.93; } }
+@keyframes shake { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-3px, 2px); } 50% { transform: translate(3px, -2px); } 75% { transform: translate(-2px, -1px); } }
+@keyframes title-in { 0% { opacity: 0; transform: scale(3) rotate(-6deg); } 60% { opacity: 1; transform: scale(.94) rotate(-1deg); } 100% { transform: none; } }
+.roll { animation: roll 5.5s linear infinite; }
+.blink { animation: blink 1.1s steps(1) infinite; }
+.blink-fast { animation: blink 0.5s steps(1) infinite; }
+.hum { animation: hum 3.7s steps(4) infinite; }
+.shake { animation: shake 0.25s steps(2) infinite; }
+@media (prefers-reduced-motion: reduce) { #title { animation: none !important; } }
+
+/* Buttons in the prototypes' parchment / brass styles */
+.btn-brass { height: 60px; padding: 0 30px; display: flex; align-items: center; cursor: pointer; border: none;
+  font-family: 'Grenze Gotisch', serif; font-weight: 700; font-size: 32px; color: #1d140c;
+  background: linear-gradient(180deg, #D6C29C 0%, #8A7556 100%);
+  box-shadow: inset 0 -5px 0 #6A5638, inset 0 2px 0 #F2E4C2, 0 5px 0 #2a1f15; text-shadow: 0 1px 0 rgba(255,255,255,0.4); }
+.btn-dark { height: 60px; padding: 0 26px; display: flex; align-items: center; cursor: pointer;
+  font-family: 'Grenze Gotisch', serif; font-weight: 700; font-size: 32px; color: #F0D9A0;
+  background: rgba(22,17,13,0.92); border: 2px solid #8A7556; box-shadow: 0 5px 0 #000; }
+.btn-brass:disabled, .btn-dark:disabled { opacity: .45; cursor: default; }
+.card-model { height: 64px; padding: 0 14px; cursor: pointer; text-align: left;
+  font-family: 'Special Elite', monospace; font-size: 22px; color: #1d1a16;
+  background: rgba(255,255,255,0.35); border: 2px solid rgba(106,26,18,0.45); }
+.card-model:hover:not(:disabled) { background: rgba(255,255,255,0.6); }
+.card-model[aria-pressed="true"] { background: #6A1A12; color: #F6F0DE; }
+.card-model:disabled { cursor: default; }

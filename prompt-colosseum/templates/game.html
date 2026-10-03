@@ -4,69 +4,210 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prompt Colosseum</title>
-<style>
-  body { font: 15px/1.45 system-ui, sans-serif; background: #16110d; color: #efe6d2; max-width: 800px; margin: 0 auto; padding: 16px; }
-  h1, h2, h3 { font-weight: 600; margin: 12px 0 6px; }
-  section { border: 1px solid #5a4632; padding: 12px; margin: 12px 0; }
-  input, textarea, button { font: inherit; padding: 6px 10px; background: #0e0a08; color: #f0d9a0; border: 1px solid #8a7556; }
-  button { background: #3a2c1c; cursor: pointer; }
-  button:disabled { opacity: .4; cursor: default; }
-  textarea { width: 100%; box-sizing: border-box; min-height: 110px; }
-  .dev { font-size: 12px; color: #b3a68c; border: 1px dashed #8a7556; padding: 6px; }
-  .p1 { color: #b6ff4a; } .p2 { color: #ff4fb0; } .bad { color: #ff3b30; } .dim { color: #b3a68c; }
-  .row { display: flex; gap: 12px; flex-wrap: wrap; } .row > * { flex: 1; min-width: 240px; }
-  .card { border: 1px solid #8a7556; padding: 8px; white-space: pre-wrap; }
-  #err { color: #ff3b30; min-height: 1.4em; }
-  #offering img { max-width: 100%; max-height: 260px; }
-  #cards button { margin: 4px 6px 4px 0; }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&amp;family=Doto:wght@700;900&amp;family=Jacquard+24&amp;family=Grenze+Gotisch:wght@500;700&amp;family=Jersey+10&amp;family=Special+Elite&amp;family=Workbench&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/theme.css">
 </head>
 <body>
-<p class="dev">Dev client: plain on purpose. The design port replaces this markup and keeps the socket
-protocol in docs/GAME_SPEC.md. Open two tabs to play against yourself.</p>
-<h1>Prompt Colosseum</h1>
-<div id="err" role="alert"></div>
+<!-- One page, three screens ported from design/lobby.html, battle.html and verdict.html.
+     Layout is the prototypes' inline styles; game.js fills in what the server sends. -->
+<div id="frame">
+<div style="width: 1440px; height: 810px; position: relative; overflow: hidden; background: #070506; color: #EFE6D2; font-family: 'Grenze Gotisch', serif">
 
-<section id="entry">
-  <h2>Enter the arena</h2>
-  <p><label>Name <input id="name" maxlength="16" placeholder="Gladiator"></label>
-     <button id="create">Create a room</button></p>
-  <p><label>Room code <input id="code" maxlength="4" size="6" placeholder="ABCD"></label>
-     <button id="join">Join</button></p>
+<canvas width="320" height="180" id="stage" aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 1440px; height: 810px; image-rendering: pixelated; background: linear-gradient(180deg, #1a0f18 0%, #4a2a26 40%, #8a6a44 70%, #4a3424 100%)"></canvas>
+
+<!-- ============================== LOBBY ============================== -->
+<div id="lobby" class="screen">
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 200px; background: linear-gradient(180deg, rgba(6,3,4,0.85) 0%, rgba(6,3,4,0) 100%)"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 620px; width: 100%; height: 190px; background: linear-gradient(180deg, rgba(6,3,4,0) 0%, rgba(6,3,4,0.55) 100%)"></div>
+
+<div style="position: absolute; left: 220px; top: 4px; width: 1000px; display: flex; flex-direction: column; align-items: center; gap: 2px">
+<h1 id="title" style="animation: title-in .7s cubic-bezier(.15,1.5,.3,1) both; margin: 0; font-family: 'Jacquard 24', serif; font-weight: 400; font-size: 116px; line-height: 1; color: #F0D9A0; text-shadow: 0 5px 0 #000, 4px 0 0 rgba(255,40,140,0.45), -4px 0 0 rgba(60,200,255,0.4)">Prompt Colosseum</h1>
+<p style="margin: 0; font-size: 27px; color: #E8DCC0; text-shadow: 0 2px 0 #000">Two gladiators. One offering. The Emperors decide who bleeds.</p>
+</div>
+
+{% set plate_x = [574, 675, 767, 882] %}
+{% for s in seats %}
+<div style="position: absolute; left: {{ plate_x[loop.index0] }}px; top: 400px; transform: translateX(-50%); width: 90px; height: 44px; background: linear-gradient(180deg, #ECE2CB 0%, #BBAD92 100%); box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -2px 0 #8F8268, 0 3px 6px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px">
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 16px; line-height: 1; color: #2A1F15">{{ s.name }}</span>
+<span style="font-family: 'Workbench', monospace; font-size: 12px; line-height: 1; color: #154A6E; max-width: 86px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis">{{ s.model }}</span>
+</div>
+{% endfor %}
+
+<section id="entry" aria-label="Enter a match" style="position: absolute; left: 60px; top: 432px; width: 440px; box-sizing: border-box; padding: 22px; display: flex; flex-direction: column; gap: 14px; background: linear-gradient(180deg, rgba(42,34,28,0.94) 0%, rgba(22,17,13,0.94) 100%); border: 3px solid #5A4632; box-shadow: inset 0 0 0 2px #1a120c, inset 0 2px 0 rgba(255,230,190,0.12), 0 10px 24px rgba(0,0,0,0.6)">
+<label for="name" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Your name</label>
+<input id="name" maxlength="16" placeholder="YOUR NAME" autocomplete="off" style="height: 58px; box-sizing: border-box; padding: 0 14px; background: #0E0A08; color: #F0D9A0; border: 2px solid #5A4632; font-family: 'Jersey 10', sans-serif; font-size: 32px; letter-spacing: 2px">
+<button id="create" type="button" style="height: 82px; cursor: pointer; border: none; font-family: 'Jacquard 24', serif; font-size: 46px; color: #1d140c; background: linear-gradient(180deg, #D6C29C 0%, #8A7556 100%); box-shadow: inset 0 -6px 0 #6A5638, inset 0 2px 0 #F2E4C2, 0 6px 0 #2a1f15; text-shadow: 0 1px 0 rgba(255,255,255,0.4)">Enter the Arena</button>
+<div style="display: flex; gap: 10px">
+<label for="matchcode" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Match code</label>
+<input id="matchcode" maxlength="4" placeholder="MATCH CODE" autocomplete="off" style="flex: 1; min-width: 0; height: 58px; box-sizing: border-box; padding: 0 14px; background: #0E0A08; color: #F0D9A0; border: 2px solid #5A4632; font-family: 'Doto', monospace; font-weight: 900; font-size: 24px; letter-spacing: 4px; text-transform: uppercase">
+<button id="join" type="button" style="height: 58px; padding: 0 22px; cursor: pointer; font-family: 'Jersey 10', sans-serif; font-size: 32px; color: #F0D9A0; background: #2A1F15; border: 2px solid #C9A46A; box-shadow: 0 4px 0 #000">JOIN</button>
+</div>
 </section>
 
-<section id="room" hidden>
-  <div>Room <b id="roomcode"></b> &middot; <span id="phase"></span> &middot; round <span id="roundno">0</span>/5</div>
-  <div id="players" class="row"></div>
-  <p><button id="start" hidden>Start the match</button> <span id="wait" class="dim"></span>
-     <button id="yield" hidden>Yield</button></p>
+<section id="waiting" hidden aria-label="Your room" style="position: absolute; left: 60px; top: 472px; width: 440px; box-sizing: border-box; padding: 22px; display: flex; flex-direction: column; gap: 14px; background: linear-gradient(180deg, rgba(42,34,28,0.94) 0%, rgba(22,17,13,0.94) 100%); border: 3px solid #5A4632; box-shadow: inset 0 0 0 2px #1a120c, inset 0 2px 0 rgba(255,230,190,0.12), 0 10px 24px rgba(0,0,0,0.6)">
+<span style="font-size: 22px; color: #C9B48A">Match code</span>
+<span id="roomcode" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 64px; line-height: 1; letter-spacing: 10px; color: #F0D9A0"></span>
+<span id="waitmsg" style="font-size: 22px; color: #E8DCC0"></span>
+<button id="start" type="button" hidden style="height: 82px; cursor: pointer; border: none; font-family: 'Jacquard 24', serif; font-size: 46px; color: #1d140c; background: linear-gradient(180deg, #D6C29C 0%, #8A7556 100%); box-shadow: inset 0 -6px 0 #6A5638, inset 0 2px 0 #F2E4C2, 0 6px 0 #2a1f15; text-shadow: 0 1px 0 rgba(255,255,255,0.4)">Begin the Games</button>
 </section>
 
-<section id="round" hidden>
-  <h2 id="title"></h2>
-  <p id="brief"></p>
-  <p id="wild" class="bad"></p>
-  <p>Time left: <b id="timer"></b> &middot; <span id="opp" class="dim"></span></p>
-  <div id="offering"></div>
-  <div id="cards"></div>
-  <div id="write">
-    <textarea id="text" placeholder="Your testimonium"></textarea>
-    <span id="count" class="dim"></span> <button id="seal">Seal</button>
-  </div>
+<section aria-label="Rules of the games" style="position: absolute; left: 940px; top: 472px; width: 440px; box-sizing: border-box; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; background: linear-gradient(180deg, rgba(42,34,28,0.94) 0%, rgba(22,17,13,0.94) 100%); border: 3px solid #5A4632; box-shadow: inset 0 0 0 2px #1a120c, inset 0 2px 0 rgba(255,230,190,0.12), 0 10px 24px rgba(0,0,0,0.6)">
+<h2 style="margin: 0; font-weight: 700; font-size: 34px; line-height: 1; color: #F0D9A0">Order of the Games</h2>
+<ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px">
+<li style="display: grid; grid-template-columns: 34px 1fr auto; align-items: baseline; gap: 8px; font-size: 20px; color: #E8DCC0"><span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 17px; color: #C9A46A">I</span><span><b style="font-weight: 700; color: #F0D9A0">Pictvra</b> &middot; describe the picture</span><span style="font-family: 'Workbench', monospace; font-size: 13px; color: #8A7556">60s</span></li>
+<li style="display: grid; grid-template-columns: 34px 1fr auto; align-items: baseline; gap: 8px; font-size: 20px; color: #E8DCC0"><span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 17px; color: #C9A46A">II</span><span><b style="font-weight: 700; color: #F0D9A0">Lvdvs</b> &middot; build the game</span><span style="font-family: 'Workbench', monospace; font-size: 13px; color: #8A7556">60s</span></li>
+<li style="display: grid; grid-template-columns: 34px 1fr auto; align-items: baseline; gap: 8px; font-size: 20px; color: #E8DCC0"><span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 17px; color: #C9A46A">III</span><span><b style="font-weight: 700; color: #F0D9A0">Minister</b> &middot; brief the agent</span><span style="font-family: 'Workbench', monospace; font-size: 13px; color: #8A7556">60s</span></li>
+<li style="display: grid; grid-template-columns: 34px 1fr auto; align-items: baseline; gap: 8px; font-size: 20px; color: #E8DCC0"><span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 17px; color: #C9A46A">IV</span><span><b style="font-weight: 700; color: #F0D9A0">Ars</b> &middot; write the skill</span><span style="font-family: 'Workbench', monospace; font-size: 13px; color: #8A7556">60s</span></li>
+<li style="display: grid; grid-template-columns: 34px 1fr auto; align-items: baseline; gap: 8px; font-size: 20px; color: #E8DCC0"><span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 17px; color: #C9A46A">V</span><span><b style="font-weight: 700; color: #F0D9A0">Consilivm</b> &middot; pick the model</span><span style="font-family: 'Workbench', monospace; font-size: 13px; color: #8A7556">15s</span></li>
+</ol>
+<span style="font-size: 18px; line-height: 1.15; color: #B3A68C">Always in this order; each task is drawn by lot. Highest HP after the fifth wins. Share the match code with your rival; two tabs work too.</span>
 </section>
 
-<section id="verdict" hidden>
-  <h2 id="vhead"></h2>
-  <p id="vtags"></p>
-  <div id="emperors"></div>
-  <div id="prompts" class="row"></div>
-  <p id="vbtn"><button id="compact">/compact</button> <button id="clear">/clear</button>
-     <button id="next">Next round</button></p>
+<div style="position: absolute; left: 562px; top: 452px; width: 316px; box-sizing: border-box; padding: 14px 14px 0; border-radius: 18px 18px 12px 12px; background: linear-gradient(180deg, #D3CEC2 0%, #ABA599 55%, #8B867B 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,0.55), inset 0 -3px 0 rgba(0,0,0,0.25), 0 24px 50px rgba(0,0,0,0.75)">
+<div style="position: relative; width: 288px; height: 216px; border-radius: 20px / 26px; overflow: hidden; background: #000; box-shadow: 0 0 0 5px #1d1c1a, 0 0 0 7px #6f6a61">
+<canvas width="144" height="108" id="lobby-tv" aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 288px; height: 216px; image-rendering: pixelated; background: #3a3a3e"></canvas>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.38) 0px, rgba(0,0,0,0.38) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 3px)"></div>
+<div class="roll" aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 56px; background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 100%)"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: linear-gradient(118deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 36%, rgba(255,255,255,0) 37%), radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.6) 100%)"></div>
+<div class="blink" style="position: absolute; left: 0; right: 0; top: 86px; display: flex; justify-content: center"><span id="lobby-tvtext" style="padding: 4px 10px; background: #000; font-family: 'Workbench', monospace; font-size: 22px; color: #F2F2F2">INSERT GLADIATOR</span></div>
+<div style="position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; justify-content: space-between; padding: 2px 7px; background: #000; font-family: 'Workbench', monospace; font-size: 15px; color: #F2F2F2">
+<span id="lobby-tvcap">no offering</span><span>ch 03</span>
+</div>
+</div>
+<div style="height: 36px; display: flex; justify-content: space-between; align-items: center; padding: 0 4px">
+<div aria-hidden="true" style="width: 48px; height: 8px; background: repeating-linear-gradient(90deg, #5d594f 0 3px, rgba(0,0,0,0) 3px 6px)"></div>
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="font-family: 'Workbench', monospace; font-size: 14px; letter-spacing: 3px; color: #4a463f">SENATRON</span>
+<span aria-hidden="true" class="blink" style="width: 6px; height: 6px; background: #FF3B30; box-shadow: 0 0 6px #FF3B30"></span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============================== BATTLE ============================== -->
+<div id="battle" class="screen" hidden>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 170px; background: linear-gradient(180deg, rgba(6,3,4,0.82) 0%, rgba(6,3,4,0) 100%)"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 650px; width: 100%; height: 160px; background: linear-gradient(180deg, rgba(6,3,4,0) 0%, rgba(6,3,4,0.45) 100%)"></div>
+
+<div style="position: absolute; left: 570px; top: 10px; width: 300px; display: flex; flex-direction: column; align-items: center">
+<div id="timer" class="hum" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 70px; line-height: 1; color: #F2EEDC; text-shadow: 0 0 14px rgba(242,238,220,0.45), 3px 0 0 rgba(255,40,140,0.35)">00:00</div>
+<div id="rtitle" style="font-weight: 700; font-size: 30px; line-height: 1; color: #E9CF8E; text-shadow: 0 2px 0 #000, 0 0 12px rgba(0,0,0,0.9)">The Offering</div>
+<div id="rlabel" style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 14px; letter-spacing: 4px; color: #C9B48A; margin-top: 4px; text-shadow: 0 1px 0 #000">Rovnd I of V</div>
+<div id="wild" hidden style="margin-top: 6px; padding: 2px 10px; background: rgba(90,14,10,0.85); font-size: 20px; color: #FFC2B8; text-align: center"></div>
+</div>
+
+<div style="position: absolute; left: 1010px; top: 196px; width: 316px; transform: scale(1.25) rotate(1.5deg); transform-origin: top left; box-sizing: border-box; padding: 14px 14px 12px; border-radius: 18px 18px 12px 12px; background: linear-gradient(180deg, #D3CEC2 0%, #ABA599 55%, #8B867B 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,0.55), inset 0 -3px 0 rgba(0,0,0,0.25), 8px 10px 0 rgba(0,0,0,0.55)">
+<div style="position: relative; width: 288px; height: 216px; border-radius: 20px / 26px; overflow: hidden; background: #000; box-shadow: 0 0 0 5px #1d1c1a, 0 0 0 7px #6f6a61">
+<canvas width="144" height="108" id="battle-tv" role="img" aria-label="The offering" style="position: absolute; left: 0; top: 0; width: 288px; height: 216px; image-rendering: pixelated; background: #10131f"></canvas>
+<div id="tv-text" hidden style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; box-sizing: border-box; padding: 18px 20px; display: flex; align-items: center; justify-content: center; text-align: center; background: #0d1018; font-family: 'Workbench', monospace; font-size: 19px; line-height: 1.3; color: #E8F0E0; text-shadow: 0 0 6px rgba(180,255,200,0.35)"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.38) 0px, rgba(0,0,0,0.38) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 3px), radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.6) 100%)"></div>
+<div id="tv-cap" style="position: absolute; left: 10px; bottom: 10px; padding: 1px 6px; background: #000; font-family: 'Workbench', monospace; font-size: 14px; color: #F2F2F2">offering</div>
+</div>
+</div>
+
+<section aria-label="Your testimony" style="position: absolute; left: 60px; top: 432px; width: 880px; height: 336px; box-sizing: border-box; padding: 16px 30px 34px; display: flex; flex-direction: column; gap: 10px; transform: rotate(-0.7deg); background: linear-gradient(180deg, #F6F0DE 0%, #E4DAC0 100%); box-shadow: inset 0 0 26px rgba(120,90,40,0.2), 12px 14px 0 rgba(0,0,0,0.6), 0 0 0 3px #1d1a16">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 20px; border-bottom: 2px dashed rgba(106,26,18,0.35); padding-bottom: 6px">
+<label id="brief" for="testimony" style="font-weight: 700; font-size: 26px; line-height: 1.1; color: #6A1A12">Describe the offering</label>
+<span id="count" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 22px; color: #6A1A12; white-space: nowrap">0/300</span>
+</div>
+<textarea id="testimony" maxlength="300" spellcheck="false" style="flex: 1; resize: none; background: rgba(0,0,0,0); border: none; outline: none; padding: 0; font-family: 'Special Elite', monospace; font-size: 25px; line-height: 1.4; color: #1d1a16; caret-color: #D4202A"></textarea>
+<div id="cards" hidden style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-content: center"></div>
+</section>
+<div aria-hidden="true" style="position: absolute; left: 44px; top: 758px; width: 916px; height: 24px; border-radius: 12px; background: linear-gradient(180deg, #4a4646 0%, #121010 55%, #2a2626 100%); box-shadow: 0 4px 0 rgba(0,0,0,0.6)"></div>
+<button id="seal" type="button" style="position: absolute; left: 884px; top: 668px; width: 104px; height: 104px; border-radius: 50%; border: none; cursor: pointer; transform: rotate(-10deg); display: flex; align-items: center; justify-content: center; font-family: 'Grenze Gotisch', serif; font-weight: 700; font-size: 34px; color: #F6D9C8; background: radial-gradient(circle at 35% 30%, #D8483C 0%, #9A1C14 55%, #5A0E0A 100%); box-shadow: inset 0 0 0 6px rgba(90,14,10,0.6), 6px 8px 0 rgba(0,0,0,0.6); text-shadow: 0 2px 0 #3a0806">Seal</button>
+
+<div id="deliberate" hidden style="position: absolute; left: 60px; top: 380px; width: 880px; text-align: center; font-family: 'Jacquard 24', serif; font-size: 52px; color: #F0D9A0; text-shadow: 0 4px 0 #000">The Emperors deliberate…</div>
+</div>
+
+<!-- ============================== VERDICT ============================== -->
+<div id="verdict" class="screen" hidden>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 190px; background: linear-gradient(180deg, rgba(6,3,4,0.85) 0%, rgba(6,3,4,0) 100%)"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 650px; width: 100%; height: 160px; background: linear-gradient(180deg, rgba(6,3,4,0) 0%, rgba(6,3,4,0.5) 100%)"></div>
+
+<div style="position: absolute; left: 520px; top: 12px; width: 400px; display: flex; flex-direction: column; align-items: center; gap: 4px">
+<h1 id="vtitle" style="margin: 0; text-align: center; font-family: 'Jacquard 24', serif; font-weight: 400; font-size: 52px; line-height: 0.95; color: #F0D9A0; text-shadow: 0 4px 0 #000, 3px 0 0 rgba(255,40,140,0.4)">The Emperors Have Spoken</h1>
+<div id="vline" style="font-size: 23px; color: #E8DCC0; text-align: center; text-shadow: 0 2px 0 #000"></div>
+</div>
+
+<div id="dmgbox" class="shake" style="position: absolute; left: 44px; top: 248px; display: flex; flex-direction: column; align-items: flex-start">
+<span id="dmg" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 118px; line-height: 1; color: #FF3B30; text-shadow: 4px 4px 0 #000, -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 0 24px rgba(255,40,30,0.7)"></span>
+<span id="dmglabel" style="font-size: 24px; color: #FFC2B8; text-shadow: 0 2px 0 #000"></span>
+</div>
+<div id="tags" style="position: absolute; left: 44px; top: 380px; width: 360px; display: flex; flex-direction: column; gap: 2px; font-size: 21px; color: #FFE6A8; text-shadow: 0 2px 0 #000"></div>
+
+{% for s, x, num in [("p1", 180, "I"), ("p2", 1020, "II")] %}
+<section id="paper-{{ s }}" aria-label="Testimony {{ num }}, judged" style="position: absolute; left: {{ x }}px; top: 414px; width: 240px; height: 190px; box-sizing: border-box; padding: 10px 15px 18px; display: flex; flex-direction: column; gap: 4px; background: linear-gradient(180deg, #F3ECD8 0%, #E2D8BE 100%); box-shadow: inset 0 0 18px rgba(120,90,40,0.18), 4px 6px 14px rgba(0,0,0,0.55)">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<span style="font-size: 19px; color: {{ '#6A1A12' if s == 'p1' else '#6A1A4A' }}">Testimonium {{ num }}</span>
+<span class="total" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 18px; color: {{ '#2E6A10' if s == 'p1' else '#A0145E' }}"></span>
+</div>
+<p class="text" style="margin: 0; overflow: hidden; font-family: 'Special Elite', monospace; font-size: 15px; line-height: 1.3; color: #1d1a16"></p>
+<span class="stamp" style="position: absolute; right: 10px; bottom: 14px; transform: rotate(-10deg); padding: 0 10px; font-family: 'Jacquard 24', serif; font-size: 34px; line-height: 1.1"></span>
+</section>
+<div aria-hidden="true" style="position: absolute; left: {{ x - 4 }}px; top: 592px; width: 268px; height: 18px; border-radius: 9px; background: linear-gradient(180deg, #4a4646 0%, #121010 55%, #2a2626 100%); box-shadow: 0 3px 4px rgba(0,0,0,0.6)"></div>
+{% endfor %}
+
+<section aria-label="The emperors' reasons" style="position: absolute; left: 470px; top: 458px; width: 500px">
+<div aria-hidden="true" style="height: 14px; margin: 0 -12px; border-radius: 7px; background: linear-gradient(180deg, #8A5A30 0%, #3A2010 100%); box-shadow: 0 3px 4px rgba(0,0,0,0.5)"></div>
+<div style="padding: 10px 20px 12px; display: flex; flex-direction: column; gap: 7px; background: linear-gradient(90deg, #D9CDAE 0%, #EDE4CC 12%, #EDE4CC 88%, #D9CDAE 100%); box-shadow: inset 0 0 22px rgba(120,90,40,0.25)">
+<h2 style="margin: 0; text-align: center; font-weight: 700; font-size: 30px; line-height: 1; color: #5A1A12">Acta Imperatorum</h2>
+<div id="acta" style="display: grid; grid-template-columns: 112px 52px minmax(0, 1fr); align-items: baseline; gap: 4px 10px; color: #1d1a16"></div>
+</div>
+<div aria-hidden="true" style="height: 14px; margin: 0 -12px; border-radius: 7px; background: linear-gradient(180deg, #8A5A30 0%, #3A2010 100%); box-shadow: 0 3px 4px rgba(0,0,0,0.5)"></div>
 </section>
 
-<section id="end" hidden><h2 id="endhead"></h2><p id="endhp"></p></section>
+<div id="vbuttons" style="position: absolute; left: 270px; top: 718px; width: 900px; display: flex; justify-content: center; gap: 18px">
+<button id="compact" type="button" class="btn-dark" title="Halve your context bar. Heals 10 HP at 60-85% full, 3 HP otherwise.">/compact</button>
+<button id="clear" type="button" class="btn-dark" title="Empty your context bar, but give up your next checklist heal.">/clear</button>
+<button id="next" type="button" class="btn-brass">Next Rovnd</button>
+<button id="yield" type="button" class="btn-dark">Yield</button>
+</div>
+
+<div id="endbox" hidden style="position: absolute; left: 470px; top: 690px; width: 500px; display: flex; flex-direction: column; align-items: center; gap: 10px">
+<span id="endtext" style="font-family: 'Jacquard 24', serif; font-size: 54px; line-height: 1; color: #F0D9A0; text-shadow: 0 4px 0 #000"></span>
+<button id="again" type="button" class="btn-brass">Back to the Lobby</button>
+</div>
+</div>
+
+<!-- ============ HUD: both gladiators, shared by battle and verdict ============ -->
+<div id="hud" class="screen" hidden style="pointer-events: none">
+<div style="position: absolute; left: 40px; top: 18px; width: 470px; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<span id="p1-label" style="font-size: 22px; font-weight: 500; color: #C9B48A; text-shadow: 0 2px 0 #000">Gladiator the First</span>
+<span id="p1-hp" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 32px; color: #B6FF4A; text-shadow: 0 0 10px rgba(182,255,74,0.6)">100</span>
+</div>
+<div id="p1-name" style="font-family: 'Jersey 10', sans-serif; font-size: 54px; line-height: 0.85; letter-spacing: 1px; color: #F6F0DE; text-shadow: 3px 3px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000, 0 0 18px rgba(182,255,74,0.55)"></div>
+<div id="p1-bar" style="display: flex; gap: 5px; padding-left: 4px; margin-top: 6px"></div>
+<div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; font-family: 'Workbench', monospace; font-size: 14px; color: #C9B48A; text-shadow: 0 1px 0 #000">
+<span>context</span><span style="width: 200px; height: 8px; background: rgba(0,0,0,0.6); border: 1px solid #5A4632"><span id="p1-ctx" style="display: block; height: 100%; width: 0; background: #E9CF8E"></span></span><span id="p1-ctxn">0%</span>
+</div>
+<div id="p1-tag" hidden style="align-self: flex-start; display: flex; align-items: center; gap: 8px; margin-top: 4px; padding: 2px 10px; background: rgba(0,0,0,0.6); font-family: 'Workbench', monospace; font-size: 15px; color: #D8FF9A"><span class="blink" style="width: 8px; height: 8px; background: #B6FF4A"></span><span class="t">writing…</span></div>
+</div>
+
+<div style="position: absolute; right: 40px; top: 18px; width: 470px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px">
+<div style="width: 100%; display: flex; justify-content: space-between; align-items: baseline">
+<span id="p2-hp" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 32px; color: #FF4FB0; text-shadow: 0 0 10px rgba(255,79,176,0.6)">100</span>
+<span id="p2-label" style="font-size: 22px; font-weight: 500; color: #C9B48A; text-shadow: 0 2px 0 #000">Gladiator the Second</span>
+</div>
+<div id="p2-name" style="font-family: 'Jersey 10', sans-serif; font-size: 54px; line-height: 0.85; letter-spacing: 1px; color: #F6F0DE; text-shadow: 3px 3px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000, 0 0 18px rgba(255,79,176,0.55)"></div>
+<div id="p2-bar" style="display: flex; gap: 5px; padding-right: 4px; margin-top: 6px"></div>
+<div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; font-family: 'Workbench', monospace; font-size: 14px; color: #C9B48A; text-shadow: 0 1px 0 #000">
+<span id="p2-ctxn">0%</span><span style="width: 200px; height: 8px; background: rgba(0,0,0,0.6); border: 1px solid #5A4632; display: flex; justify-content: flex-end"><span id="p2-ctx" style="display: block; height: 100%; width: 0; background: #E9CF8E"></span></span><span>context</span>
+</div>
+<div id="p2-tag" hidden style="display: flex; align-items: center; gap: 8px; margin-top: 4px; padding: 2px 10px; background: rgba(0,0,0,0.6); font-family: 'Workbench', monospace; font-size: 15px; color: #FF8FCB"><span class="blink" style="width: 8px; height: 8px; background: #FF4FB0"></span><span class="t">writing…</span></div>
+</div>
+</div>
+
+<div id="toast" role="alert" style="position: absolute; left: 420px; top: 140px; width: 600px; text-align: center; pointer-events: none; font-size: 24px; color: #FFC2B8; text-shadow: 0 2px 0 #000"></div>
+
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.3; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.55) 0px, rgba(0,0,0,0.55) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 3px)"></div>
+</div>
+</div>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/static/js/emperors.js"></script>
+<script src="/static/js/arena.js"></script>
+<script src="/static/js/fx.js"></script>
 <script src="/static/js/game.js"></script>
 </body>
 </html>

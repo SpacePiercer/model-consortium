@@ -24,7 +24,9 @@ def create_app(clock=None, judge=None):
 
     @app.get("/")
     def index():
-        return render_template("game.html")
+        from . import judges
+        seats = [{"name": s.name, "model": s.judge.label} for s in judges.get_seats()]
+        return render_template("game.html", seats=seats)
 
     @app.get("/healthz")
     def healthz():

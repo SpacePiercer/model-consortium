@@ -5,8 +5,9 @@
 Phase 0 passed with two live judges (Gemini + Groq). `app/prompts/` holds the judge prompt,
 personas, score-anchor rubrics and sample cases; `python3 app/calibrate.py` checks them live.
 Phases 1–2 (server side) are done: `app/rooms.py`, `app/events.py`, `app/__init__.py`, `run.py`,
-with `tests/test_rooms.py`. A plain dev client (`templates/game.html`, `static/js/game.js`) speaks
-the whole protocol, and two browser tabs played a full 5-round match (fake judges).
+with `tests/test_rooms.py`. The design port is done: `templates/game.html` and `static/js/game.js`
+put the lobby, battle and verdict prototypes on one page over that protocol (fake judges played a
+full 5-round match on it in two tabs).
 Two public-domain paintings are in `static/offerings/` (`starry-night.jpg`, `great-wave.jpg`), and
 a full match has played on the real judges (`JUDGES=live`) under gunicorn. Until more pictures
 arrive, `draw()` only picks pictures that exist.
@@ -15,8 +16,8 @@ Grenze Gotisch body font, comic-book effects in `design/fx.js` (Latin slams, ris
 lines, shake, "Continvatvr"), a crowd in robes and hides, a Red Room lodge, and the four Emperors
 as one cut-out group of low-poly AI-CEO caricatures (`design/emperors.js`) with vote thumbs,
 in neutral, happy (player won) and mad (player lost) poses.
-**Next:** the design port onto that protocol, more pictures (lighthouse, desert, a logo, pixel
-art) and Pictvra sample cases, and a Render account for the deploy.
+**Next:** more pictures (lighthouse, desert, a logo, pixel art) and Pictvra sample cases, and a
+Render account for the deploy.
 
 Run it: `python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt`, then
 `.venv/bin/python run.py` and open http://localhost:5001 in two tabs. Tests: `.venv/bin/python -m pytest tests`.

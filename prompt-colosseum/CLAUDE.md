@@ -33,10 +33,9 @@ app/
   calibrate.py         # live check that the judges pick the winners in prompts/cases/
   events.py            # socket handlers
 static/
-  js/arena.js          # copied from design/arena.js
+  js/arena.js          # copied from design/arena.js (+ exports dither, noiseField)
   js/emperors.js       # copied from design/emperors.js (emperor portraits; load before arena.js)
   js/game.js           # lobby, battle and verdict on one page, one Socket.IO connection
-                       # (today a plain dev client that speaks the whole protocol; the design port replaces it)
   css/theme.css        # extracted from the prototypes
   offerings/           # images referenced by the pools in app/rounds.py
 templates/

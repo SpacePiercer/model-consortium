@@ -54,10 +54,13 @@ prototypes pixel for pixel.
 - Each round comes from `app/rounds.py`; the CRT shows the picture or the task text.
 - Fake judges (`JUDGES=fake`, the default with no keys) return random scores from a seeded RNG,
   so tests are repeatable.
-- pytest: damage formula, timer auto-submit, disconnect forfeit.
+- Mechanics from `docs/GAME_SPEC.md`, with the numbers imported from `app/rounds.py`: damage x
+  round multiplier, the 1 HP floor before round 5, checklist-sweep heal, the context bar
+  (rot above 85%, `/compact`, `/clear`), and round 5 pick damage.
+- pytest: damage formula, timer auto-submit, disconnect forfeit, context bar and healing.
 - 🙋 Nice to have: your first 5–10 pictures.
 
-**Done when:** two browser tabs play a full best-of-5 match from start to finish.
+**Done when:** two browser tabs play a full 5-round match from start to finish.
 
 ## Phase 3: Real judges
 - Parallel calls to every seated judge, 15 s per call, 20 s overall deadline, one retry
@@ -90,6 +93,8 @@ prototypes pixel for pixel.
 - 🙋 Veto any rule defaults.
 - The verdict screen shows each Emperor's scores and remark, thumbs in the arena, a shaking
   damage number, HP bars and Victor / Victus stamps.
+- Both prompts side by side, a context bar under each player, and `/compact` and `/clear`
+  buttons between rounds.
 - Next round, the match-end screen and Yield.
 
 **Done when:** a match ends on a winner screen, and Next and Yield both work.
@@ -118,16 +123,15 @@ For each round, in play order:
 2. **Type:** picture round or text-task round.
 3. **What players write**, as one line shown on screen.
 4. **What a winning prompt does**, as one line for the judges.
-5. **Two judging criteria.** "Craft" is added to every round automatically.
+5. **Two judging criteria.** Clarity, constraints and economy are added to every round automatically.
 6. **The pool:** pictures, or a list of tasks. Use 10+ per round so repeats are rare.
 
 Also decide:
-- **Match format:** best of 3, best of 5, or last one standing. Five themes cover a best-of-5
-  with no repeats.
-- **Round 4 (skill):** I read it as "write the skill file, with a name, when to use it and the
-  instructions, for a described behaviour, like caveman". Right?
-- **Round 5 (model pick):** scored with no AI judges, from a fixed answer key. Should it be a
-  normal round that deals damage (current), or a bonus played after the match?
+- **Match format:** decided: always the 5 rounds, in order; HP can't reach 0 before round 5.
+- **Round 4 (skill):** decided: "how", a reusable procedure with a trigger and numbered steps
+  (round 3 is "who": role, goal and scope).
+- **Round 5 (model pick):** decided: a normal round, 4 model cards, no AI judges; the first
+  correct pick deals 15, the second 5.
 - **Wildcards:** which to keep, cut or add (current list in `rounds.py`), and when they trigger,
   e.g. "50% chance from round 2 on" or "always in the deciding round".
 
@@ -154,8 +158,8 @@ These fill gaps in `docs/GAME_SPEC.md`. They're used unless you veto them before
 | Gap | Default |
 |---|---|
 | Crit (×1.25) vs the 40 damage cap | Cap at 40 after the crit |
-| Bribe penalty only hits craft, not the total | A bribing testimony scores at most 2 overall |
-| Tied round in best-of-N | Nobody wins the round; both take 5 |
+| Bribe penalty | A bribing testimony scores at most 2 overall and can't sweep the checklist |
+| Tied round | Nobody wins the round; both take 5 |
 | Player clocks out of sync | The round start includes the server time |
 | Judging can take 30 s+ with retries | Hard 20 s deadline; late judges abstain |
 | Yield button | Forfeits the match |

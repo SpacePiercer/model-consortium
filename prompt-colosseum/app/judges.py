@@ -171,14 +171,20 @@ def get_seats():
 
 def parse_reply(text):
     """First JSON object in the reply -> {"A": int, "B": int, "remark": str}; raises on junk.
-    Only "score" is required; the sub-scores are for the model's own reasoning."""
+    Only "score" is required; the sub-scores are for the model's own reasoning. If both
+    testimonies carry a "checklist" hit count, it comes back as "cl_A" / "cl_B"."""
     i = text.find("{")
     if i < 0:
         raise JudgeError("no JSON in reply")
     data, _ = json.JSONDecoder().raw_decode(text[i:])
     clamp = lambda x: max(0, min(10, int(round(float(x)))))
-    return {"A": clamp(data["A"]["score"]), "B": clamp(data["B"]["score"]),
-            "remark": str(data.get("remark", ""))[:120]}
+    out = {"A": clamp(data["A"]["score"]), "B": clamp(data["B"]["score"]),
+           "remark": str(data.get("remark", ""))[:120]}
+    try:
+        out["cl_A"], out["cl_B"] = (max(0, int(data[k]["checklist"])) for k in "AB")
+    except (KeyError, TypeError, ValueError):
+        pass  # no checklist this round, or the model botched it: no sweep from this Emperor
+    return out
 
 
 def _chat(judge, messages, json_mode):
@@ -242,11 +248,16 @@ def _emperor(seat, rnd, offering, p1, p2, wildcard, image):
         a, b = (p2, p1) if flip else (p1, p2)
         if judge.provider == "fake":
             got = {"A": rng.randint(2, 9), "B": rng.randint(2, 9), "remark": rng.choice(QUIPS)}
+            if "checklist" in offering:
+                n = len(offering["checklist"])
+                got["cl_A"], got["cl_B"] = rng.randint(0, n), rng.randint(0, n)
         else:
             system = rounds.system_prompt(rnd, "%s (%s)" % (seat.name, seat.flavour), wildcard)
             got = _ask(judge, system, _content(rounds.user_text(offering, a, b), image))
         e["p1"], e["p2"] = (got["B"], got["A"]) if flip else (got["A"], got["B"])
         e["remark"] = got["remark"]
+        if "cl_A" in got:
+            e["c1"], e["c2"] = (got["cl_B"], got["cl_A"]) if flip else (got["cl_A"], got["cl_B"])
     except Exception as ex:
         e["error"] = str(ex) or type(ex).__name__
     e["ms"] = round((time.monotonic() - t0) * 1000)
@@ -280,6 +291,17 @@ def aggregate(emps):
     return totals, len({e["vote"] for e in got}) == 1 and got[0]["vote"] != "tie"
 
 
+def sweep(emps, offering):
+    """Which players covered the whole hidden checklist (the answering Emperors' median hit
+    count reaches its length)? A flagged bribe never sweeps; that is applied by the caller."""
+    n = len(offering.get("checklist", ()))
+    out = {}
+    for p, c in (("p1", "c1"), ("p2", "c2")):
+        hits = [e[c] for e in emps if e["vote"] is not None and c in e]
+        out[p] = bool(n and hits and statistics.median(min(h, n) for h in hits) >= n)
+    return out
+
+
 def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None):
     if rnd["kind"] == "choice":
         raise ValueError("choice rounds have no judges; score them with rounds.score_choice")
@@ -305,7 +327,10 @@ def judge_round(rnd, offering, p1, p2, seated=None, wildcard=None):
                 e[p] = min(e[p], BRIBE_CAP)
         e["vote"] = "p1" if e["p1"] > e["p2"] else "p2" if e["p2"] > e["p1"] else "tie"
     totals, unanimous = aggregate(emps)
-    return {"emperors": emps, "totals": totals, "unanimous": unanimous, "flagged": flags}
+    swept = sweep(emps, offering)
+    swept = {p: swept[p] and not flags[p] for p in swept}
+    return {"emperors": emps, "totals": totals, "unanimous": unanimous, "flagged": flags,
+            "sweep": swept}
 
 
 # ---- probe -------------------------------------------------------------------------------

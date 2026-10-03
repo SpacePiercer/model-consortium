@@ -7,7 +7,7 @@ the window.
 |---|---|
 | `lobby.html` | Title, enter/join, the fixed order of the five rounds, seat the Emperors, CRT on standby |
 | `battle.html` | Writing phase: both gladiators at typewriters, the offering on the CRT |
-| `verdict.html` | Scores per Emperor, damage, revealed testimonies, next round |
+| `verdict.html` | Emperor votes and remarks, damage, revealed testimonies, next round |
 
 ## Look
 
@@ -25,7 +25,6 @@ Options are documented at the top of the file. Useful live changes:
 arena.set({ typing: 'both' });                                     // both players typing
 arena.set({ mode: 'verdict', loser: 'p1',
             votes: ['p2', 'p2', 'tie', 'p2'], hype: 1 });          // verdict pose
-arena.set({ seated: [1, 1, 0, 1] });                               // empty throne
 arena.set({ depth: 3 });                                           // crunchier colour
 ```
 

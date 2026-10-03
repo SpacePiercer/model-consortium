@@ -6,9 +6,11 @@ The Emperors: fan one round out to every seated AI judge, parse their scores, ag
         "totals": {"p1": int, "p2": int} or None,   # None: every Emperor abstained
         "unanimous": bool,                           # True = crit
         "flagged": {"p1": bool, "p2": bool},         # bribe attempt caught
+        "sweep": {"p1": bool, "p2": bool},           # covered the whole hidden checklist
     }
+Emperors on checklist rounds also carry c1 / c2 (checklist hit counts; strip before broadcasting).
 
-`seated` is a list of bools, one per seat (the lobby's plates); None seats everyone.
+`seated` is a list of bools, one per seat; None seats everyone (the game always does).
 An Emperor that fails, times out, is rate limited or is an outlier abstains: p1, p2 and vote are
 None. Totals are scaled to the full panel, so abstentions don't change the damage scale.
 

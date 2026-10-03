@@ -61,17 +61,17 @@ Phases 1–2 don't need API keys, so they can start while the keys come in.
 ---
 
 ## Phase 0: Keys and probe
-- 🙋 Fill `.env` (see [API keys](#api-keys)). Each model must accept images. First run:
-  Gemini plus the local Ollama model (`gemma4:e4b`), which replaces Groq.
+- 🙋 Fill `.env` (see [API keys](#api-keys)). Each model must accept images. Live panel:
+  Gemini + Groq; the local Ollama model (`gemma4:e4b`) is an optional dev seat.
 - 🙋 Drop one test picture (any JPG) into `static/offerings/`.
 - (done) `app/judges.py` with a probe: `python3 app/judges.py` sends the test picture and two
   sample prompts to every registered judge, then prints the parsed scores and latency. The
   probe gives us Ollama's real CPU latency.
 - `JUDGES=fake|live` in `.env` picks the mode. `live` registers every provider that has a key,
   plus Ollama when `OLLAMA_MODEL` is set. pytest always uses `fake`.
-- Seats: always 4. Registered judges take them in `.env` order; fake judges fill the rest.
+- Seats: always 4. Registered judges take them in `PROVIDERS` order; fake judges fill the rest.
 
-**Done when:** at least 2 judges (Gemini + Ollama) return valid scores for an image.
+**Done when:** at least 2 judges (Gemini + Groq) return valid scores for an image. (Passed.)
 
 ## Phase 1: App skeleton and screens
 - `requirements.txt` (flask, flask-socketio, simple-websocket, httpx, python-dotenv, gunicorn,
@@ -105,11 +105,11 @@ prototypes pixel for pixel.
 
 ## Phase 3: Real judges
 - Parallel calls to every seated judge, 15 s per call, 20 s overall deadline, one retry
-  on bad JSON. A judge that still fails abstains, and the totals are scaled up to make up for it.
+  on any failure except a rate limit. A judge that still fails abstains, and the totals are scaled up to make up for it.
   If every judge abstains, the round counts as a tie.
 - The local Ollama seat is for development only. It gets its own `OLLAMA_TIMEOUT_S=90`, and the
   round deadline stretches to match while it's seated.
-- (done in `judges.py`) A/B order shuffled per judge. A provider that hits its rate limit sits out the round.
+- (done in `judges.py`) A/B order shuffled per judge. A provider that hits its rate limit sits out until its `retry-after` passes (at most 120 s, so possibly several rounds).
 - (done in `judges.py`) Injection defence: delimiters, a regex pre-check, and dropping outlier scores.
 - Judge prompts come from `rounds.py`, so each round is judged on its own criteria.
 - Choice rounds (round 5) skip the judges: the server checks the pick against the top `fit`
@@ -198,7 +198,8 @@ Editing `app/rounds.py` directly works too.
 - **Where:** `prompt-colosseum/static/offerings/`. Tell us each picture's category, or add it
   to the picture round's pool in `rounds.py`.
 - **How many:** 5–10 per category (landscape, game logo, painting, pixel art), 20+ in total.
-- **Format:** JPG or PNG at any size. They get resized to 1024 px on the long side.
+- **Format:** JPG or PNG, resized by you to ~1024 px on the long side (`sips -Z 1024 file.jpg`);
+  the game sends the file to the judges as it is.
 - **Shape:** landscape 4:3 fits the CRT. Other shapes get cropped to the centre.
 - **Names:** lowercase with dashes, e.g. `desert-dunes.jpg`.
 - **Rights:** your own photos, public domain or CC0 (Wikimedia Commons, The Met Open Access),

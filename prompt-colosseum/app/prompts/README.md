@@ -25,8 +25,8 @@ python3 app/calibrate.py minister    # one round only
 ```
 
 `calibrate.py` makes real API calls (one per judge per case) and pauses 10 s between cases to
-stay under Groq's free per-minute limit. A MISS means a judge disagreed with the expected winner:
-read its scores, then fix the rubric anchors or the case, whichever was wrong.
+stay under Groq's free per-minute limit. A MISS means the panel's totals picked a different winner than
+expected: read each judge's scores, then fix the rubric anchors or the case, whichever was wrong.
 
 ## Adding things
 

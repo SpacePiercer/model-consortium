@@ -7,14 +7,15 @@ different providers) scores both prompts against the image. The loser takes dama
 Start by reading, in this order:
 
 1. `docs/GAME_SPEC.md` — game loop, rules, damage, socket events, state.
-2. `docs/JUDGES.md` — judge system prompt, JSON schema, providers, prompt-injection defence.
+2. `docs/JUDGES.md` — providers, request and parsing rules, prompt-injection defence (the live
+   judge prompt and schema are in `app/prompts/`).
 3. `design/README.md` — the visual direction and how the prototypes are built.
 4. Open `design/index.html` in a browser to see the three screens (lobby, battle, verdict).
 5. `PLAN.md` — build phases, current status, and where the team still owes input.
 
 ## Stack
 
-- Backend: Python 3.11+, Flask, Flask-SocketIO (eventlet or gevent), httpx for judge calls.
+- Backend: Python 3.11+, Flask, Flask-SocketIO (threading mode + simple-websocket; gunicorn with threads), httpx for judge calls.
 - Frontend: plain HTML/CSS/JS served by Flask (no framework needed). Socket.IO client.
 - Rendering: `design/arena.js` draws the whole 3D-ish colosseum into a 320×180 canvas that is
   scaled up with `image-rendering: pixelated`. Reuse it; the only planned edit is exporting
@@ -35,6 +36,7 @@ app/
 static/
   js/arena.js          # copied from design/arena.js (+ exports dither, noiseField)
   js/emperors.js       # copied from design/emperors.js (emperor portraits; load before arena.js)
+  js/fx.js             # copied from design/fx.js (the drama layer)
   js/game.js           # lobby, battle and verdict on one page, one Socket.IO connection
   css/theme.css        # extracted from the prototypes
   offerings/           # images referenced by the pools in app/rounds.py

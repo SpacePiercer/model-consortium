@@ -70,7 +70,8 @@ Example (round 1, x1.0): totals 26 vs 33, margin 7, damage 10 + 21 = 31, HP 72 �
   lose the round.
 - **Context bar:** every character a player writes adds to their bar, which holds 600 for the
   whole match. The caps (300 + 250 + 200 + 150 = 900) mean writing to every cap fills it, so
-  players must compact once. Above 85% is "context rot": the player's scores are x0.8.
+  players must /compact or /clear most rounds (one compact is not enough: the bar is checked
+  after the current round's text is added). Above 85% is "context rot": the player's scores are x0.8.
 - **/compact** (verdict screen, between rounds): halves the bar and heals +10 when used at 60-85%
   full, +3 outside that band.
 - **/clear:** empties the bar, but forfeits your next checklist-sweep heal.
@@ -162,15 +163,16 @@ or 5), shown on screen with the round brief and sent in `round:start`.
 
 - Rules the judges enforce (Brevitas, Sine Colore, Sine Nomine, Vna Sententia): the rule goes
   into the Emperors' prompt, and a testimony that breaks it scores at most 3 overall.
-- Rules the game enforces: Clepsydra halves the round's time; Caecvs hides the offering after
-  10 s.
+- Rules the game enforces: Clepsydra halves the round's time (server). Caecvs hides the offering
+  after 10 s on the client only; the server just sends the wildcard, and the judges get no rule.
 - Wildcards are the one exception to the fixed per-round limits.
 
 ## Offerings
 
 Rounds and their offering pools are hardcoded in `app/rounds.py`; image files live in
 `static/offerings/`.
-Use photos you have rights to (your own, CC0, public domain). Resize to ~1024 px on the long
-side for the judges; the CRT on screen shows a pixelated 144×108 version (draw the image into
-the `#tv` canvas, then optionally dither with `ArenaEngine.paintOffering` replaced by your own
-draw + dither).
+Use photos you have rights to (your own, CC0, public domain). The game sends the file to the
+judges as it is, so resize it yourself to ~1024 px on the long side before dropping it in
+(e.g. `sips -Z 1024 file.jpg`). The CRT on screen shows a pixelated 144×108 version:
+`static/js/game.js` cover-crops it onto the `#battle-tv` canvas and dithers it with
+`ArenaEngine.dither`.

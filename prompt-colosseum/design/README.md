@@ -12,7 +12,7 @@ the window.
 ## Look
 
 PS1 / Y2K horror-arcade colosseum at dusk. Low-poly stands with flat cardboard-cutout crowd
-sprites, pixel-art emperors in a purple lodge, gladiators in crested helmets at typewriters,
+sprites in robes, belted tunics and animal hides, low-poly caricature emperors in a Red Room lodge (red drapes, zigzag ledge), gladiators in crested helmets at typewriters,
 everything rendered at 320×180 and crushed with a 4×4 ordered dither. Crisp HTML UI floats on
 top (paper testimonies, marble name plates, stone buttons, a beige CRT).
 
@@ -91,3 +91,24 @@ Wiring in the prototypes: lobby title slam-in, 参戦! on Enter; battle menace a
 gladiators, オラ pops while typing, red timer + ゴゴゴ at 10 s, shake in the last 5 s, ドン! SEALED
 on Seal; verdict ドン! entrance, menace around the winner, ドドド by the damage, To Be Continued on
 Next Round, ガーン on Yield. Reduced-motion users get no loops, flashes or shakes.
+
+## Emperors (emperors.js)
+
+The four emperors are goofy low-poly caricatures of AI CEOs in laurel wreaths, left to right:
+Dario Amodei (giant curly hair, glasses, grin, toga), Sam Altman (huge googly eyes, tunic),
+Mark Zuckerberg (Caesar curls, a whole wolf on his head, pelt, gold chain) and Elon Musk (big
+jaw, smirk, dark robe).
+
+They come from an AI-generated reference render, `tools/emperors_source.jpg`, cut out as one
+group by `tools/cut_emperors.py` so their overlaps stay as rendered: a hand-traced hull keeps
+the torch and pillars out, the red curtain is colour-keyed away by flood fill from outside,
+and near-black curtain folds are only removed inside listed gap boxes (they match Amodei's
+hair and Musk's robe). The group is cropped at the ledge, downscaled to 2 texels per arena
+pixel and stored as one PNG data URI (`window.EMPERORS`). Rerun with
+`python design/tools/cut_emperors.py` (needs Pillow and numpy).
+
+To sit in the arena instead of looking pasted on, `arena.js` gives the group an ink outline,
+a drop shadow on the curtain, warm torchlight from the left, a contact shadow at the ledge and
+the same ordered dither as the arena. Votes show as a small pixel thumbs-up beside each head on
+the favoured gladiator's side. Lobby name plates sit under the faces (stage x 574, 675, 767,
+882). Load `emperors.js` before `arena.js`.

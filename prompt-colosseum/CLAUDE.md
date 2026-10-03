@@ -31,6 +31,7 @@ app/
   events.py            # socket handlers
 static/
   js/arena.js          # copied from design/arena.js
+  js/emperors.js       # copied from design/emperors.js (emperor portraits; load before arena.js)
   js/lobby.js, battle.js, verdict.js
   css/theme.css        # extracted from the prototypes
   offerings/           # images referenced by the pools in app/rounds.py

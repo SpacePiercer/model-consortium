@@ -2,7 +2,9 @@
 
 **Done:** design prototypes, game and judge specs, round templates (`app/rounds.py`), `.env` slots.
 `app/judges.py` (judges, aggregation, bribe check, probe) with `tests/test_judges.py`.
-**Next:** Phase 0: fill `.env`, then run `python3 app/judges.py`.
+Phase 0 passed with two live judges (Gemini + Groq). `app/prompts/` holds the judge prompt,
+personas, score-anchor rubrics and sample cases; `python3 app/calibrate.py` checks them live.
+**Next:** a real picture in `static/offerings/` (then Pictvra cases), and Phases 1–2.
 
 Each phase ends with something that runs. 🙋 marks the points where we need input from you.
 Phases 1–2 don't need API keys, so they can start while the keys come in.

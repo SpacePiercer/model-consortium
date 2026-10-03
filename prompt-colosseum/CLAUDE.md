@@ -27,7 +27,9 @@ app/
   __init__.py          # Flask app + SocketIO
   rooms.py             # Room / Player / Round dataclasses, state machine
   judges.py            # provider clients, fan-out, parsing, aggregation
-  rounds.py            # round themes, offering/task pools, wildcards, judge prompts
+  rounds.py            # round themes, offering/task pools, wildcards, judge prompt builder
+  prompts/             # editable judge text: judge.md, personas/, rubrics/, cases/ (see its README)
+  calibrate.py         # live check that the judges pick the winners in prompts/cases/
   events.py            # socket handlers
 static/
   js/arena.js          # copied from design/arena.js

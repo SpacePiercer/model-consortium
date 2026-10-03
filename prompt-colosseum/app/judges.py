@@ -48,13 +48,8 @@ DEADLINE = 20     # seconds for the whole panel; stretches if a seat has a longe
 BRIBE_CAP = 2     # a testimony caught bribing scores at most this overall
 OUTLIER_GAP = 6   # drop an Emperor this far from the panel median
 
-# Personas go to seats in order. Flavours are written for the picture round; harmless elsewhere.
-EMPERORS = [
-    ("augusta", "Avgvsta", "precise and cold; values composition and light"),
-    ("brutus", "Brvtvs", "a blunt soldier; values the obvious subject being right"),
-    ("cassia", "Cassia", "a mystic; values mood and colour"),
-    ("decimus", "Decimvs", "an old scholar; values medium and technique"),
-]
+# Personas go to seats in order. Their temperament lives in prompts/personas/<id>.md.
+EMPERORS = [("augusta", "Avgvsta"), ("brutus", "Brvtvs"), ("cassia", "Cassia"), ("decimus", "Decimvs")]
 
 # Seat priority order. (name, OpenAI-compatible base URL, key env, model env)
 PROVIDERS = [
@@ -118,7 +113,6 @@ class Judge:
 class Seat:
     id: str
     name: str
-    flavour: str
     judge: Judge
 
 
@@ -259,7 +253,7 @@ def _emperor(seat, rnd, offering, p1, p2, wildcard, image):
                 n = len(offering["checklist"])
                 got["cl_A"], got["cl_B"] = rng.randint(0, n), rng.randint(0, n)
         else:
-            system = rounds.system_prompt(rnd, "%s (%s)" % (seat.name, seat.flavour), wildcard)
+            system = rounds.system_prompt(rnd, "%s (%s)" % (seat.name, rounds.persona_for(seat.id)), wildcard)
             got = _ask(judge, system, _content(rounds.user_text(offering, a, b), image))
         e["p1"], e["p2"] = (got["B"], got["A"]) if flip else (got["A"], got["B"])
         e["remark"] = got["remark"]

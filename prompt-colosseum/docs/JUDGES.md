@@ -40,9 +40,12 @@ Notes:
 
 ### System prompt
 
-The live prompt is built per round by `app/rounds.py` (each round swaps in its own goal and
-criteria, plus an optional wildcard). Every judged round also scores the three shared
-criteria (clarity, constraints, economy). Below is the image round's version.
+The live prompt is built per round by `system_prompt()` in `app/rounds.py` from the files in
+`app/prompts/` (template and judging procedure in `judge.md`, temperaments in `personas/`, score
+anchors in `rubrics/`; see `app/prompts/README.md`). Each round swaps in its own goal and
+criteria, plus an optional wildcard, and every judged round also scores the three shared
+criteria (clarity, constraints, economy). The text below is the original image-round draft;
+`judge.md` is the source of truth now.
 
 ```
 You are {PERSONA}, an Emperor judging a contest in the Prompt Colosseum.

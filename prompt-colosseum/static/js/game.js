@@ -53,7 +53,7 @@
   socket.on("connect", () => { const s = saved(); if (s) socket.emit("room:rejoin", { code: s.code, playerId: s.token }); });
   socket.on("error", e => {
     toast(e.message);
-    if (/gone|Could not rejoin/.test(e.message)) { forget(); me = null; $("entry").hidden = false; $("waiting").hidden = true; show("lobby"); }
+    if (/gone|Could not rejoin|abandoned/.test(e.message)) { forget(); me = null; $("entry").hidden = false; $("waiting").hidden = true; show("lobby"); }
   });
 
   // ---- HUD: names, HP bars, context bars ----
@@ -207,6 +207,7 @@
   };
   socket.on("round:sealed", s => tag(s.playerId, "sealed"));
   socket.on("round:judging", () => {
+    show("battle");   // a player who rejoins mid-judging arrives here straight from the lobby
     stopTimer(); $("timer").textContent = "--:--";
     $("testimony").disabled = $("seal").disabled = true;
     $("deliberate").hidden = false;
@@ -226,7 +227,7 @@
     $("endbox").hidden = true; $("vbuttons").hidden = false;
     SLOTS.forEach(s => tag(s, null));
     const winner = v.loser ? other(v.loser) : null;
-    const votes = v.emperors.length ? v.emperors.map(e => e.vote || "tie") : null;
+    const votes = v.emperors.length ? v.emperors.map(e => e.vote) : null;
     const mood = !winner ? "neutral" : winner === me ? "happy" : "mad";   // the Emperors face the local player
     arena.set({ mode: "verdict", stations: true, loser: v.loser, votes: votes, mood: mood, hype: 1, tv: null, typing: null });
 

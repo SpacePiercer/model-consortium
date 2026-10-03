@@ -86,7 +86,7 @@ Client → server
 | `room:create` | `{ name }` |
 | `room:join` | `{ code, name }` |
 | `room:start` | `{}` (host, once both players are in; starts the countdown) |
-| `room:rejoin` | `{ code, playerId }` (after a refresh or a dropped connection, within the grace) |
+| `room:rejoin` | `{ code, playerId }` (after a refresh or a dropped connection; accepted until the next round starts) |
 | `round:draft` | `{ text }` (optional, throttled; lets the server auto-submit on time-out) |
 | `round:seal` | `{ text }` |
 | `round:choose` | `{ model }` (round 5 only; a key of `MODELS`) |
@@ -133,7 +133,8 @@ Extra verdict fields: `dmg` (`{ p1, p2 }`, the HP each player lost; `damage` is 
 `loser` the player who lost more, or null when equal), `forfeit` (`"p1"` or `"p2"`, only when a
 disconnect cost them the round), and in round 5 `picks` (the model each player chose), `correct`
 (the right pickers, fastest first) and `answer` (the top-fit model keys). In round 5 `prompts`
-holds the picked model's name and `emperors` is empty. A rotted player's scores (context bar above
+holds the picked model's name, `totals` holds each pick's 0-10 `fit` score (shown on the papers),
+and `emperors` is empty. A rotted player's scores (context bar above
 85%) count x0.8 in `totals` and in each Emperor's vote, while the per-Emperor numbers shown stay raw.
 
 ## Phases (per room)
@@ -142,12 +143,15 @@ holds the picked model's name and `emperors` is empty. A rotted player's scores 
 
 ## Edge cases
 
-- Disconnect (any phase): 20 s grace to `room:rejoin`. After that the player loses the current
-  round: 40 × the round's multiplier damage, no crit. If they are still gone when the next round
-  starts, they lose the match (`match:end` reason `disconnect`).
+- Disconnect during writing or judging: 20 s grace to `room:rejoin`. After that the player loses
+  the current round: 40 × the round's multiplier damage (round 5: × 1, so 40), no crit. They can
+  still rejoin until the next round starts; the forfeited round stays lost.
+- Disconnect during a verdict costs nothing by itself.
+- Anyone still gone when the next round starts loses the match (`match:end` reason `disconnect`).
 - Yield: the player loses the match at once (`match:end` reason `yield`).
 - A lobby or countdown that loses a player (grace ran out) or everyone: the remaining player gets
-  an `error` ("The match was abandoned.") and the room is deleted.
+  an `error` ("The match was abandoned.") and the room is deleted; the client clears its saved
+  session and returns to the lobby's entry form.
 - `/compact` and `/clear` are accepted only on a verdict screen before round 5, once per player per
   round. A pending `/clear` penalty is used up by the next sweep that would have healed.
 - Double seal: ignore after the first.

@@ -1,8 +1,10 @@
 # Prompt Colosseum — instructions for Claude Code
 
-A two-player, real-time web game. Both players see the same image ("the offering") and have a
-timer to write the prompt that best describes it. A panel of AI "Emperors" (vision LLMs from
-different providers) scores both prompts against the image. The loser takes damage. Always 5 fixed rounds; higher HP after round 5 wins.
+A two-player, real-time web game that teaches prompting an AI. Every match is the same five
+rounds: describe a picture for an image generator, prompt an AI to build a game, brief an agent,
+write a skill, and pick the right model for a task. A panel of AI "Emperors" (LLMs from different
+providers) scores both players' prompts in rounds 1-4; round 5 is scored by the server. The loser
+of each round takes damage; higher HP after round 5 wins.
 
 Start by reading, in this order:
 

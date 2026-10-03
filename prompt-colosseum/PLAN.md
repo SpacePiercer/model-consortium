@@ -20,20 +20,25 @@ Phases 1–2 don't need API keys, so they can start while the keys come in.
 ---
 
 ## Phase 0: Keys and probe
-- 🙋 Fill `.env` (see [API keys](#api-keys)). Each model must accept images.
+- 🙋 Fill `.env` (see [API keys](#api-keys)). Each model must accept images. First run:
+  Gemini plus the local Ollama model (`gemma4:e4b`), which replaces Groq.
 - 🙋 Drop one test picture (any JPG) into `static/offerings/`.
 - Build `app/judges.py` with a probe: `python3 app/judges.py` sends the test picture and two
-  sample prompts to every provider that has a key, then prints the parsed scores and latency.
-- Seats: the first 4 providers with a key take the 4 thrones, in `.env` order.
+  sample prompts to every registered judge, then prints the parsed scores and latency. The
+  probe gives us Ollama's real CPU latency.
+- `JUDGES=fake|live` in `.env` picks the mode. `live` registers every provider that has a key,
+  plus Ollama when `OLLAMA_MODEL` is set. pytest always uses `fake`.
+- Seats: one seat per registered judge (1–4), in `.env` order, with personas assigned in seat order.
 
-**Done when:** at least 2 providers return valid scores for an image.
+**Done when:** at least 2 judges (Gemini + Ollama) return valid scores for an image.
 
 ## Phase 1: App skeleton and screens
 - `requirements.txt` (flask, flask-socketio, simple-websocket, httpx, python-dotenv, gunicorn,
   pytest) and a venv.
 - One page, `templates/game.html`, with lobby, battle and verdict sections ported from the
   prototypes. Socket.IO keeps one connection across phases.
-- `static/js/arena.js` (adds the `dither` export), `static/css/theme.css`.
+- `static/js/arena.js` (adds the `dither` export, and draws only as many thrones as there are
+  seats), `static/css/theme.css`.
 - A launch config so the app runs in the preview pane.
 
 **Done when:** the app serves the lobby, and switching phases flips screens that match the
@@ -46,15 +51,19 @@ prototypes pixel for pixel.
   match end, 20 s reconnect grace, then forfeit.
 - `app/events.py`: the socket events from `docs/GAME_SPEC.md`.
 - Each round comes from `app/rounds.py`; the CRT shows the picture or the task text.
-- Fake judges return random scores.
+- Fake judges (`JUDGES=fake`, the default with no keys) return random scores from a seeded RNG,
+  so tests are repeatable.
 - pytest: damage formula, timer auto-submit, disconnect forfeit.
 - 🙋 Nice to have: your first 5–10 pictures.
 
 **Done when:** two browser tabs play a full best-of-5 match from start to finish.
 
 ## Phase 3: Real judges
-- Parallel calls to the 4 seated providers, 15 s per call, 20 s overall deadline, one retry
+- Parallel calls to every seated judge, 15 s per call, 20 s overall deadline, one retry
   on bad JSON. A judge that still fails abstains, and the totals are scaled up to make up for it.
+  If every judge abstains, the round counts as a tie.
+- The local Ollama seat is for development only. It gets its own `OLLAMA_TIMEOUT_S=90`, and the
+  round deadline stretches to match while it's seated.
 - A/B order shuffled per judge. A provider that hits its rate limit sits out the round.
 - Injection defence: delimiters (done), a regex pre-check, and dropping outlier scores.
 - Judge prompts come from `rounds.py`, so each round is judged on its own criteria.
@@ -88,6 +97,8 @@ prototypes pixel for pixel.
 
 ## Phase 7: Deploy and demo
 - 🙋 A Render or Fly account (free tier), who presents, and a rough demo script.
+- 🙋 A few dollars on one paid provider (OpenAI or Anthropic) as the second live seat, because
+  Ollama is too slow for the live demo and Gemini alone is a single point of failure.
 - Deploy as one worker, since rooms live in memory. Vercel can't hold websockets.
 - Test the deploy on the venue Wi-Fi, and record a backup video.
 - Freeze the code about 3 h before judging.
@@ -141,6 +152,7 @@ These fill gaps in `docs/GAME_SPEC.md`. They're used unless you veto them before
 | Judging can take 30 s+ with retries | Hard 20 s deadline; late judges abstain |
 | Yield button | Forfeits the match |
 | Practice mode | Phase 6, cut if time is short |
+| Every judge abstains in a round | Counts as a tie: nobody wins the round; both take 5 |
 
 ## API keys
 
@@ -152,5 +164,6 @@ These fill gaps in `docs/GAME_SPEC.md`. They're used unless you veto them before
 | OpenRouter | openrouter.ai/settings/keys | Free models, ~50 requests/day without credits | `OPENROUTER_API_KEY`, `OPENROUTER_MODELS` |
 | OpenAI | platform.openai.com/api-keys | Paid | `OPENAI_API_KEY`, `OPENAI_MODEL` |
 | Anthropic | console.anthropic.com, under API Keys | Paid | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` |
+| Ollama (local, dev only) | Already installed; `gemma4:e4b` is pulled | Free, slow on CPU | `OLLAMA_MODEL`, `OLLAMA_TIMEOUT_S` |
 
 Put a few dollars on one paid provider before the demo; free quotas can run out mid-presentation.

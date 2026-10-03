@@ -1,8 +1,13 @@
 # The Emperors (AI judges)
 
-Four seats, each a different vision-capable model behind a different free tier, so the panel is
-diverse and rate limits are spread out. Free tiers change often; check each provider's current
-model list and limits before wiring a model ID.
+One to four seats, one per registered judge, each a different vision-capable model behind a
+different free tier, so the panel is diverse and rate limits are spread out. Free tiers change
+often; check each provider's current model list and limits before wiring a model ID.
+
+`JUDGES=fake|live` in `.env` picks the mode. `fake` (the default, and always in pytest) seats
+judges that return random scores from a seeded RNG. `live` registers every provider that has a
+key, plus Ollama when `OLLAMA_MODEL` is set, in `.env` order; personas go to seats in table
+order. The arena draws only as many thrones as there are seats.
 
 | Seat | Persona | Provider | OpenAI-compatible base URL (verify) |
 |---|---|---|---|
@@ -10,9 +15,14 @@ model list and limits before wiring a model ID.
 | brutus | Brvtvs | Groq (Llama 4 Scout, vision) | `https://api.groq.com/openai/v1` |
 | cassia | Cassia | Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1` |
 | decimus | Decimvs | OpenRouter (a `:free` vision model, with fallbacks) | `https://openrouter.ai/api/v1` |
+| (dev) | next free persona | Ollama, local (`gemma4:e4b`), replaces Groq for now | `http://localhost:11434/v1` |
 
-All four speak the OpenAI chat-completions format, so one client with a swappable `base_url`,
+All of them speak the OpenAI chat-completions format, so one client with a swappable `base_url`,
 `api_key` and `model` covers them. Put the model IDs in `.env`, not in code.
+
+First run: Gemini + Ollama. The Ollama seat runs on CPU (20–60 s per verdict, to be measured by
+the probe), so it is for development only and never seated in the live demo. Before the demo, add
+one paid provider (OpenAI or Anthropic) as the second live seat.
 
 Notes:
 - Gemini's free tier may use your inputs to improve Google's models and excludes commercial use.
@@ -25,7 +35,8 @@ Notes:
   where supported; otherwise rely on the schema in the prompt and parse defensively).
 - Randomize which player is A and which is B, independently per Emperor, to cancel position bias.
   Map back to p1/p2 after parsing.
-- Timeout 15 s. One retry on invalid JSON. Otherwise the Emperor abstains.
+- Timeout 15 s (`OLLAMA_TIMEOUT_S`, default 90 s, for the local seat). One retry on invalid JSON.
+  Otherwise the Emperor abstains. If every Emperor abstains, the round counts as a tie.
 
 ### System prompt
 
@@ -104,6 +115,7 @@ Strip `<<<` and `>>>` from player text before inserting, and truncate to 400 cha
 ## Environment
 
 ```
+JUDGES=fake               # fake | live
 GEMINI_API_KEY=
 GEMINI_MODEL=
 GROQ_API_KEY=
@@ -113,5 +125,7 @@ CF_API_TOKEN=
 CF_MODEL=
 OPENROUTER_API_KEY=
 OPENROUTER_MODELS=        # comma-separated, first is primary
+OLLAMA_MODEL=             # e.g. gemma4:e4b; dev only
+OLLAMA_TIMEOUT_S=90
 JUDGE_TIMEOUT_S=15
 ```

@@ -10,6 +10,7 @@ Start by reading, in this order:
 2. `docs/JUDGES.md` — judge system prompt, JSON schema, providers, prompt-injection defence.
 3. `design/README.md` — the visual direction and how the prototypes are built.
 4. Open `design/index.html` in a browser to see the three screens (lobby, battle, verdict).
+5. `PLAN.md` — build phases, current status, and where the team still owes input.
 
 ## Stack
 

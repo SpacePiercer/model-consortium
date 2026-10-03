@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt Colosseum</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&amp;family=Doto:wght@700;900&amp;family=Jacquard+24&amp;family=Jacquarda+Bastarda+9&amp;family=Jersey+10&amp;family=Special+Elite&amp;family=Workbench&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#070506}
+a{color:#F6D9C8}a:hover{color:#FFFFFF}
+input::placeholder{color:#6E5E46}
+@keyframes roll{0%{transform:translateY(-80px)}100%{transform:translateY(240px)}}
+@keyframes blink{0%,55%{opacity:1}56%,100%{opacity:0.12}}
+.roll{animation:roll 5.5s linear infinite}
+.blink{animation:blink 1.1s steps(1) infinite}
+</style>
+<style>
+html,body{height:100%;overflow:hidden;background:#000}
+#frame{position:absolute;left:50%;top:50%;width:1440px;height:810px;transform-origin:center center}
+</style>
+</head>
+<body>
+<div id="frame">
+<div style="width: 1440px; height: 810px; position: relative; overflow: hidden; background: #070506; color: #EFE6D2; font-family: 'Jacquarda Bastarda 9', serif">
+
+<canvas width="320" height="180" id="stage" aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 1440px; height: 810px; image-rendering: pixelated; background: linear-gradient(180deg, #1a0f18 0%, #4a2a26 40%, #8a6a44 70%, #4a3424 100%)"></canvas>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 200px; background: linear-gradient(180deg, rgba(6,3,4,0.85) 0%, rgba(6,3,4,0) 100%)"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 620px; width: 100%; height: 190px; background: linear-gradient(180deg, rgba(6,3,4,0) 0%, rgba(6,3,4,0.55) 100%)"></div>
+
+<div style="position: absolute; left: 220px; top: 4px; width: 1000px; display: flex; flex-direction: column; align-items: center; gap: 2px">
+<h1 style="margin: 0; font-family: 'Jacquard 24', serif; font-weight: 400; font-size: 116px; line-height: 1; color: #F0D9A0; text-shadow: 0 5px 0 #000, 4px 0 0 rgba(255,40,140,0.45), -4px 0 0 rgba(60,200,255,0.4)">Prompt Colosseum</h1>
+<p style="margin: 0; font-size: 27px; color: #E8DCC0; text-shadow: 0 2px 0 #000">Two gladiators. One offering. The Emperors decide who bleeds.</p>
+</div>
+
+<button type="button" aria-pressed="true" style="position: absolute; left: 511px; top: 400px; transform: translateX(-50%); width: 128px; height: 44px; padding: 0; border: none; cursor: pointer; background: linear-gradient(180deg, #ECE2CB 0%, #BBAD92 100%); box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -2px 0 #8F8268, 0 3px 6px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px">
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 16px; line-height: 1; color: #2A1F15">Avgvsta</span>
+<span style="font-family: 'Workbench', monospace; font-size: 15px; line-height: 1; color: #154A6E">gemini flash</span>
+</button>
+<button type="button" aria-pressed="true" style="position: absolute; left: 650px; top: 400px; transform: translateX(-50%); width: 128px; height: 44px; padding: 0; border: none; cursor: pointer; background: linear-gradient(180deg, #ECE2CB 0%, #BBAD92 100%); box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -2px 0 #8F8268, 0 3px 6px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px">
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 16px; line-height: 1; color: #2A1F15">Brvtvs</span>
+<span style="font-family: 'Workbench', monospace; font-size: 15px; line-height: 1; color: #6E4206">llama 4 scout</span>
+</button>
+<button type="button" aria-pressed="true" style="position: absolute; left: 790px; top: 400px; transform: translateX(-50%); width: 128px; height: 44px; padding: 0; border: none; cursor: pointer; background: linear-gradient(180deg, #ECE2CB 0%, #BBAD92 100%); box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -2px 0 #8F8268, 0 3px 6px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px">
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 16px; line-height: 1; color: #2A1F15">Cassia</span>
+<span style="font-family: 'Workbench', monospace; font-size: 15px; line-height: 1; color: #4A2E8A">mistral small</span>
+</button>
+<button type="button" aria-pressed="true" style="position: absolute; left: 929px; top: 400px; transform: translateX(-50%); width: 128px; height: 44px; padding: 0; border: none; cursor: pointer; background: linear-gradient(180deg, #ECE2CB 0%, #BBAD92 100%); box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -2px 0 #8F8268, 0 3px 6px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px">
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 16px; line-height: 1; color: #2A1F15">Decimvs</span>
+<span style="font-family: 'Workbench', monospace; font-size: 15px; line-height: 1; color: #3E3832">free vision</span>
+</button>
+
+<section aria-label="Enter a match" style="position: absolute; left: 60px; top: 472px; width: 440px; box-sizing: border-box; padding: 22px; display: flex; flex-direction: column; gap: 14px; background: linear-gradient(180deg, rgba(42,34,28,0.94) 0%, rgba(22,17,13,0.94) 100%); border: 3px solid #5A4632; box-shadow: inset 0 0 0 2px #1a120c, inset 0 2px 0 rgba(255,230,190,0.12), 0 10px 24px rgba(0,0,0,0.6)">
+<a href="battle.html" style="height: 82px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-family: 'Jacquard 24', serif; font-size: 46px; color: #1d140c; background: linear-gradient(180deg, #D6C29C 0%, #8A7556 100%); box-shadow: inset 0 -6px 0 #6A5638, inset 0 2px 0 #F2E4C2, 0 6px 0 #2a1f15; text-shadow: 0 1px 0 rgba(255,255,255,0.4)">Enter the Arena</a>
+<div style="display: flex; gap: 10px">
+<label for="matchcode" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Match code</label>
+<input id="matchcode" placeholder="MATCH CODE" style="flex: 1; min-width: 0; height: 58px; box-sizing: border-box; padding: 0 14px; background: #0E0A08; color: #F0D9A0; border: 2px solid #5A4632; font-family: 'Doto', monospace; font-weight: 900; font-size: 24px; letter-spacing: 4px">
+<button type="button" style="height: 58px; padding: 0 22px; cursor: pointer; font-family: 'Jersey 10', sans-serif; font-size: 32px; color: #F0D9A0; background: #2A1F15; border: 2px solid #C9A46A; box-shadow: 0 4px 0 #000">JOIN</button>
+</div>
+<button type="button" style="height: 50px; cursor: pointer; font-family: 'Jacquarda Bastarda 9', serif; font-size: 24px; color: #E8DCC0; background: rgba(0,0,0,0); border: 2px dashed #8A7556">Practice against the Emperors</button>
+<span style="font-size: 19px; color: #B3A68C">[N] gladiators wait beneath the sand</span>
+</section>
+
+<section aria-label="Rules of the games" style="position: absolute; left: 940px; top: 472px; width: 440px; box-sizing: border-box; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; background: linear-gradient(180deg, rgba(42,34,28,0.94) 0%, rgba(22,17,13,0.94) 100%); border: 3px solid #5A4632; box-shadow: inset 0 0 0 2px #1a120c, inset 0 2px 0 rgba(255,230,190,0.12), 0 10px 24px rgba(0,0,0,0.6)">
+<h2 style="margin: 0; font-family: 'Jacquard 24', serif; font-weight: 400; font-size: 36px; line-height: 1; color: #F0D9A0">Rules of the Games</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 20px; color: #C9B48A">Hourglass
+<select style="height: 44px; padding: 0 8px; background: #E9DFC8; color: #2A1F15; border: 2px solid #8A7556; font-family: 'Special Elite', monospace; font-size: 18px"><option>60 seconds</option><option>90 seconds</option><option>30 seconds</option></select></label>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 20px; color: #C9B48A">Format
+<select style="height: 44px; padding: 0 8px; background: #E9DFC8; color: #2A1F15; border: 2px solid #8A7556; font-family: 'Special Elite', monospace; font-size: 18px"><option>Best of five</option><option>Best of three</option><option>Last one standing</option></select></label>
+</div>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 20px; color: #C9B48A">Offerings
+<select style="height: 44px; padding: 0 8px; background: #E9DFC8; color: #2A1F15; border: 2px solid #8A7556; font-family: 'Special Elite', monospace; font-size: 18px"><option>Real photographs</option><option>Public-domain paintings</option><option>Pixel art</option><option>Mixed</option></select></label>
+<span style="font-size: 18px; color: #B3A68C">Press a plate on the lodge to seat or dismiss an Emperor.</span>
+</section>
+
+<div aria-hidden="true" style="position: absolute; left: 584px; top: 714px; width: 272px; height: 96px">
+<div style="position: absolute; left: 0; top: 0; width: 272px; height: 16px; background: #B79E78; clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%)"></div>
+<div style="position: absolute; left: 0; top: 16px; width: 136px; height: 80px; background: linear-gradient(180deg, #7E6A4E 0%, #3E3022 100%)"></div>
+<div style="position: absolute; left: 136px; top: 16px; width: 136px; height: 80px; background: linear-gradient(180deg, #9A8462 0%, #4E3E2C 100%)"></div>
+<div style="position: absolute; left: 0; top: 44px; width: 272px; height: 3px; background: rgba(0,0,0,0.35)"></div>
+</div>
+
+<div style="position: absolute; left: 562px; top: 452px; width: 316px; box-sizing: border-box; padding: 14px 14px 0; border-radius: 18px 18px 12px 12px; background: linear-gradient(180deg, #D3CEC2 0%, #ABA599 55%, #8B867B 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,0.55), inset 0 -3px 0 rgba(0,0,0,0.25), 0 24px 50px rgba(0,0,0,0.75)">
+<div style="position: relative; width: 288px; height: 216px; border-radius: 20px / 26px; overflow: hidden; background: #000; box-shadow: 0 0 0 5px #1d1c1a, 0 0 0 7px #6f6a61">
+<canvas width="144" height="108" id="tv" aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 288px; height: 216px; image-rendering: pixelated; background: #3a3a3e"></canvas>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.38) 0px, rgba(0,0,0,0.38) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 3px)"></div>
+<div class="roll" aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 56px; background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 100%)"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: linear-gradient(118deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 36%, rgba(255,255,255,0) 37%), radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.6) 100%)"></div>
+<div class="blink" style="position: absolute; left: 0; right: 0; top: 86px; display: flex; justify-content: center"><span style="padding: 4px 10px; background: #000; font-family: 'Workbench', monospace; font-size: 22px; color: #F2F2F2">INSERT GLADIATOR</span></div>
+<div style="position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; justify-content: space-between; padding: 2px 7px; background: #000; font-family: 'Workbench', monospace; font-size: 15px; color: #F2F2F2">
+<span>no offering</span><span>ch 03</span>
+</div>
+</div>
+<div style="height: 36px; display: flex; justify-content: space-between; align-items: center; padding: 0 4px">
+<div aria-hidden="true" style="width: 48px; height: 8px; background: repeating-linear-gradient(90deg, #5d594f 0 3px, rgba(0,0,0,0) 3px 6px)"></div>
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="font-family: 'Workbench', monospace; font-size: 14px; letter-spacing: 3px; color: #4a463f">SENATRON</span>
+<span aria-hidden="true" class="blink" style="width: 6px; height: 6px; background: #FF3B30; box-shadow: 0 0 6px #FF3B30"></span>
+</div>
+</div>
+</div>
+
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.3; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.55) 0px, rgba(0,0,0,0.55) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 3px)"></div>
+</div>
+</div>
+<script src="arena.js"></script>
+<script>
+(function () {
+  var frame = document.getElementById('frame');
+  function fit() {
+    var s = Math.min(window.innerWidth / 1440, window.innerHeight / 810);
+    frame.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit); fit();
+  var opts = {"mode": "lobby", "stations": false, "tvMode": "static"};
+  opts.tv = document.getElementById('tv');
+  window.arena = ArenaEngine.create(document.getElementById('stage'), opts);
+})();
+</script>
+</body>
+</html>

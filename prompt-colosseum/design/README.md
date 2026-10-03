@@ -5,7 +5,7 @@ the window.
 
 | File | Screen |
 |---|---|
-| `lobby.html` | Title, enter/join, rules of the games, seat the Emperors, CRT on standby |
+| `lobby.html` | Title, enter/join, the fixed order of the five rounds, seat the Emperors, CRT on standby |
 | `battle.html` | Writing phase: both gladiators at typewriters, the offering on the CRT |
 | `verdict.html` | Scores per Emperor, damage, revealed testimonies, next round |
 
@@ -66,7 +66,7 @@ real game draw the actual offering image into it (nearest-neighbour downscale) a
 
 ## Layout anchors (stage px)
 
-- Emperor plates (lobby only; dropped from battle and verdict): centres x = 511, 650, 790, 929; top 400; 128×44. These line up with the
+- Emperor plates (lobby only; dropped from battle and verdict): centres x = 574, 675, 767, 882; top 400; 90×44. These line up with the
   emperors drawn by `arena.js`; if you move the lodge in the renderer, move the plates.
 - Battle: one big testimony sheet, left 60, top 432, 880×336, text 25px; opponent shows only a "writing…" tag under their HP bar.
 - Verdict: testimony papers left 180 / 1020, top 414, 240×190; platen rollers at top 592.
@@ -75,22 +75,23 @@ real game draw the actual offering image into it (nearest-neighbour downscale) a
 
 ## fx.js (drama layer)
 
-Manga / JoJo-style effects on top of every screen. `FX.init()` once, then:
+Comic-book drama in Roman dress on top of every screen: Latin shouts in Cinzel Decorative and faint
+rising glyphs (✠ †), not manga katakana. Keep it sparing. `FX.init()` once, then:
 
 | Call | Effect |
 |---|---|
-| `FX.menace({x, y, w, h, color})` | floating ゴゴゴ in a zone, returns `stop()` |
-| `FX.pop(text, x, y)` | one-off sound effect (オラ, ドド) |
-| `FX.slam(text, {sub, color})` | giant centred impact text (ドン!) |
+| `FX.menace({x, y, w, h, color, chars})` | faint glyphs rising in a zone, returns `stop()` |
+| `FX.pop(text, x, y)` | one-off shout (IO!, EIA!) |
+| `FX.slam(text, {sub, color})` | big centred impact text (Signatvm, Vae Victis!) |
 | `FX.lines(ms)` | radial speed lines |
 | `FX.invert(n)` | negative-colour flash |
-| `FX.shake(ms, px)` | stage shake |
-| `FX.tbc(cb)` | sepia freeze + "TO BE CONTINUED" arrow |
+| `FX.shake(ms, px)` | shake the stage |
+| `FX.tbc(cb)` | sepia freeze + "Continvatvr" plaque |
 
-Wiring in the prototypes: lobby title slam-in, 参戦! on Enter; battle menace around both
-gladiators, オラ pops while typing, red timer + ゴゴゴ at 10 s, shake in the last 5 s, ドン! SEALED
-on Seal; verdict ドン! entrance, menace around the winner, ドドド by the damage, To Be Continued on
-Next Round, ガーン on Yield. Reduced-motion users get no loops, flashes or shakes.
+Wiring in the prototypes: lobby title slam-in, Ad Arenam! on Enter; battle glyphs around both
+gladiators, a small shout every 30 keys, red timer + Tempvs Fvgit at 10 s, shake in the last 5 s,
+Signatvm on Seal; verdict Vae Victis! entrance, glyphs around the winner, Continvatvr on Next
+Round, Misericordia on Yield. Reduced-motion users get no loops, flashes or shakes.
 
 ## Emperors (emperors.js)
 
@@ -99,7 +100,13 @@ Dario Amodei (giant curly hair, glasses, grin, toga), Sam Altman (huge googly ey
 Mark Zuckerberg (Caesar curls, a whole wolf on his head, pelt, gold chain) and Elon Musk (big
 jaw, smirk, dark robe).
 
-They come from an AI-generated reference render, `tools/emperors_source.jpg`, cut out as one
+There are three poses, all at the same scale and ledge line so the heads stay put when they
+swap: neutral (`tools/emperors_source.jpg`), happy (`tools/emperors_happy.png`, the player
+won the round) and mad (`tools/emperors_mad.jpg`, the player lost). `arena.js` takes
+`mood: 'neutral' | 'happy' | 'mad'`; left unset, the verdict picks mad when `loser` is `p1`
+(the local player) and happy when it is `p2`. Preview with `verdict.html?mood=happy`.
+
+Each pose is an AI-generated reference render, cut out as one
 group by `tools/cut_emperors.py` so their overlaps stay as rendered: a hand-traced hull keeps
 the torch and pillars out, the red curtain is colour-keyed away by flood fill from outside,
 and near-black curtain folds are only removed inside listed gap boxes (they match Amodei's

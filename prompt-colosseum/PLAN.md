@@ -2,7 +2,15 @@
 
 **Done:** design prototypes, game and judge specs, round templates (`app/rounds.py`), `.env` slots.
 `app/judges.py` (judges, aggregation, bribe check, probe) with `tests/test_judges.py`.
-**Next:** Phase 0: fill `.env`, then run `python3 app/judges.py`.
+Design refresh (2026-10-03, see `design/README.md`): a big typing sheet on the battle screen,
+Grenze Gotisch body font, comic-book effects in `design/fx.js` (Latin slams, rising ✠ glyphs, speed
+lines, shake, "Continvatvr"), a crowd in robes and hides, a Red Room lodge, and the four Emperors
+as one cut-out group of low-poly AI-CEO caricatures (`design/emperors.js`) with vote thumbs,
+in neutral, happy (player won) and mad (player lost) poses.
+**Now:** Phase 0. `.env` has `GEMINI_API_KEY` and `GROQ_API_KEY`, but no `GEMINI_MODEL`,
+`GROQ_MODEL` or `OLLAMA_MODEL`, so live mode seats no judges yet. There's no test picture in
+`static/offerings/` yet.
+**Next:** add the model IDs and a picture, then run `python3 app/judges.py`.
 
 Each phase ends with something that runs. 🙋 marks the points where we need input from you.
 Phases 1–2 don't need API keys, so they can start while the keys come in.
@@ -38,8 +46,9 @@ Phases 1–2 don't need API keys, so they can start while the keys come in.
   pytest) and a venv.
 - One page, `templates/game.html`, with lobby, battle and verdict sections ported from the
   prototypes. Socket.IO keeps one connection across phases.
-- `static/js/arena.js` (adds the `dither` export, and draws only as many thrones as there are
-  seats), `static/css/theme.css`.
+- `static/js/emperors.js`, `static/js/arena.js` (adds the `dither` export) and `static/js/fx.js`,
+  loaded in that order, plus `static/css/theme.css`. The Emperors are one fixed picture of four,
+  so an empty seat can't be hidden. Seat count changes only the votes, the scores and the plates.
 - A launch config so the app runs in the preview pane.
 
 **Done when:** the app serves the lobby, and switching phases flips screens that match the
@@ -91,8 +100,12 @@ prototypes pixel for pixel.
 
 ## Phase 5: Verdict and match flow
 - 🙋 Veto any rule defaults.
-- The verdict screen shows each Emperor's scores and remark, thumbs in the arena, a shaking
-  damage number, HP bars and Victor / Victus stamps.
+- The verdict screen shows each Emperor's scores and remark, thumbs in the arena (already drawn
+  by `arena.js` from `votes`), a shaking damage number, HP bars and Victor / Victus stamps.
+  The prototype dropped the per-Emperor score plates, so the scores need a new place on screen.
+- 🙋 The Emperors are now caricatures of Amodei, Altman, Zuckerberg and Musk, but the personas
+  (Avgvsta, Brvtvs, Cassia, Decimvs in `judges.py`, `JUDGES.md` and the lobby) still have the
+  old names. Rename them or keep them.
 - Both prompts side by side, a context bar under each player, and `/compact` and `/clear`
   buttons between rounds.
 - Next round, the match-end screen and Yield.
@@ -100,8 +113,8 @@ prototypes pixel for pixel.
 **Done when:** a match ends on a winner screen, and Next and Yield both work.
 
 ## Phase 6: Polish (in this order; stop when time runs out)
-1. A judging animation, because the wait is 5–20 s.
-2. Sounds and screen shake.
+1. A judging animation, because the wait is 5–20 s. Build it from `fx.js` (menace glyphs).
+2. Sounds. Screen shake and the slams already exist in `fx.js`; drive them from server events.
 3. Reconnect after a page refresh.
 4. Practice mode against the Emperors.
 

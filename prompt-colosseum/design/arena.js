@@ -12,6 +12,8 @@
  *     typing: 'p1',            // battle: who is typing ('p1' | 'p2' | 'both' | null)
  *     loser: null,             // verdict: 'p1' | 'p2'
  *     votes: null,             // verdict: per emperor 'p1' | 'p2' | 'tie'
+ *     mood: null,              // emperors' faces: 'neutral' | 'happy' | 'mad'; null = neutral, except in
+ *                              //   the verdict: 'mad' when p1 (the local player) lost, 'happy' when p2 lost
  *     seated: [1, 1, 1, 1],    // unused: the four emperors are one cut-out image
  *     hype: 0,                 // 0..1 crowd excitement
  *     depth: 4,                // colour bits per channel after dithering (2..6)
@@ -154,21 +156,41 @@
     return 'rgb(' + Math.min(255, Math.round((n >> 16 & 255) * k)) + ',' + Math.min(255, Math.round((n >> 8 & 255) * k)) + ',' + Math.min(255, Math.round((n & 255) * k)) + ')';
   }
 
-  function emperorBox(parTop) {
-    var d = root.EMPERORS, t = d.texel;
-    var x0 = GROUP_CX - d.w / t / 2 - PAD / t;
-    return { x0: x0, y0: parTop - (d.h + PAD) / t, w: d.w + PAD * 2, h: d.h + PAD, t: t };
+  // The poses: the neutral group at the top level of EMPERORS plus any in EMPERORS.moods.
+  function emperorPoses() {
+    var d = root.EMPERORS, out = { neutral: d };
+    Object.keys(d.moods || {}).forEach(function (k) { out[k] = d.moods[k]; });
+    return out;
   }
 
-  function drawEmperors(ov, img, o) {
-    var A = assets(), d = root.EMPERORS;
+  function emperorMood(o) {
+    if (o.mood) return o.mood;
+    if (o.mode === 'verdict' && o.loser) return o.loser === 'p1' ? 'mad' : 'happy';
+    return 'neutral';
+  }
+
+  // Overlay box in arena pixels, sized to the tallest pose; every pose stands on the ledge.
+  function emperorBox(parTop) {
+    var d = root.EMPERORS, t = d.texel, poses = emperorPoses(), h = 0;
+    Object.keys(poses).forEach(function (k) { h = Math.max(h, poses[k].h); });
+    var x0 = GROUP_CX - d.w / t / 2 - PAD / t;
+    return { x0: x0, y0: parTop - (h + PAD) / t, w: d.w + PAD * 2, h: h + PAD, t: t };
+  }
+
+  function drawEmperors(ov, imgs, o) {
+    var A = assets(), d = root.EMPERORS, poses = emperorPoses();
     var ctx = ov.getContext('2d', { willReadFrequently: true });
     if (!ctx || !d) return;
     ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, ov.width, ov.height);
+    var mood = emperorMood(o);
+    if (!poses[mood] || !imgs[mood] || !imgs[mood].naturalWidth) mood = 'neutral';
+    var img = imgs[mood], pose = poses[mood];
     if (!img || !img.complete || !img.naturalWidth) return;
     ctx.imageSmoothingEnabled = false;
-    var gx = PAD, gy = PAD, W2 = ov.width, H2 = ov.height;
+    var mean = function (a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; };
+    var W2 = ov.width, H2 = ov.height;
+    var gx = PAD + Math.round(mean(d.faces) - mean(pose.faces)), gy = H2 - pose.h;   // heads stay over the plates
 
     var sil = document.createElement('canvas'); sil.width = W2; sil.height = H2;
     var sc = sil.getContext('2d');
@@ -198,7 +220,7 @@
       A.emps.forEach(function (e, ei) {
         var v = o.votes[ei];
         if (v !== 'p1' && v !== 'p2') return;
-        var s2 = v === 'p1' ? -1 : 1, x = Math.round(gx + d.faces[ei] + s2 * 16) - 4, y = Math.round(H2 * 0.5);
+        var s2 = v === 'p1' ? -1 : 1, x = Math.round(gx + pose.faces[ei] + s2 * 16) - 4, y = Math.round(H2 * 0.5);
         var R = function (x1, y1, w, h, col) { ctx.fillStyle = col; ctx.fillRect(x1, y1, w, h); };
         R(x - 1, y - 1, 10, 9, '#140806'); R(x + 1, y - 7, 4, 7, '#140806');      // outline
         R(x, y, 8, 7, e.arm); R(x + 2, y - 6, 2, 6, tone(e.arm, 1.12));          // fist, thumb
@@ -626,8 +648,8 @@
     try { draw(canvas, 0, st.o); } catch (e) { st.alive = false; }
     if (st.alive && typeof requestAnimationFrame === 'function') st.raf = requestAnimationFrame(frame);
 
-    var ov = null, img = null;
-    var paintEmperors = function () { if (ov) { try { drawEmperors(ov, img, st.o); } catch (e) { /* ignore */ } } };
+    var ov = null, imgs = {};
+    var paintEmperors = function () { if (ov) { try { drawEmperors(ov, imgs, st.o); } catch (e) { /* ignore */ } } };
     if (root.EMPERORS && canvas.parentNode && typeof document !== 'undefined') {
       var A = assets(), k = (canvas.offsetWidth || W) / W, bx = emperorBox(A.parTop);
       ov = document.createElement('canvas');
@@ -636,7 +658,10 @@
       ov.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;left:' + (canvas.offsetLeft + bx.x0 * k) + 'px;top:' +
         (canvas.offsetTop + bx.y0 * k) + 'px;width:' + (bx.w / bx.t * k) + 'px;height:' + (bx.h / bx.t * k) + 'px';
       canvas.parentNode.insertBefore(ov, canvas.nextSibling);
-      img = new Image(); img.onload = paintEmperors; img.src = root.EMPERORS.src;
+      var poses = emperorPoses();
+      Object.keys(poses).forEach(function (k) {
+        var im = new Image(); im.onload = paintEmperors; im.src = poses[k].src; imgs[k] = im;
+      });
     }
     return {
       set: function (o) { Object.assign(st.o, o || {}); paintTv(); paintEmperors(); },

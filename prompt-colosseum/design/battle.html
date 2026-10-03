@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Offering</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&amp;family=Dela+Gothic+One&amp;family=Doto:wght@700;900&amp;family=Jacquard+24&amp;family=Grenze+Gotisch:wght@500;700&amp;family=Jersey+10&amp;family=Special+Elite&amp;family=Workbench&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&amp;family=Doto:wght@700;900&amp;family=Jacquard+24&amp;family=Grenze+Gotisch:wght@500;700&amp;family=Jersey+10&amp;family=Special+Elite&amp;family=Workbench&amp;display=swap" rel="stylesheet">
 <style>
 body{margin:0;background:#070506}
 a{color:#F6D9C8}a:hover{color:#FFFFFF}
@@ -137,8 +137,8 @@ html,body{height:100%;overflow:hidden;background:#000}
 (function () {
   FX.init();
   // menace around both gladiators
-  FX.menace({ x: 1230, y: 560, w: 170, h: 170, color: '#FF4FB0', every: 420 });
-  FX.menace({ x: 30, y: 180, w: 320, h: 200, color: '#B6FF4A', every: 520, min: 40, max: 64 });
+  FX.menace({ x: 1230, y: 560, w: 170, h: 170, color: '#FF4FB0' });
+  FX.menace({ x: 30, y: 180, w: 320, h: 200, color: '#B6FF4A', every: 1300 });
 
   // fake countdown (prototype only — the server owns the real timer)
   var timer = document.getElementById('timer'), t = 42;
@@ -146,24 +146,24 @@ html,body{height:100%;overflow:hidden;background:#000}
     t = t <= 0 ? 42 : t - 1;
     timer.textContent = '00:' + (t < 10 ? '0' : '') + t;
     timer.classList.toggle('fx-hot', t <= 10);
-    if (t === 10) { FX.lines(900, { color: 'rgba(176,76,255,0.85)' }); FX.slam('ゴゴゴ', { sub: '10 SECONDS', color: '#B04CFF', size: 150 }); }
+    if (t === 10) { FX.lines(900, { color: 'rgba(176,76,255,0.7)' }); FX.slam('Tempvs Fvgit', { sub: '10 SECONDS', color: '#C98CFF', size: 110 }); }
     if (t > 0 && t <= 5) FX.shake(160, 4);
   }, 1000);
 
   // typing: character count + a sound effect every few keystrokes
   var ta = document.getElementById('testimony'), count = document.getElementById('count'), keys = 0;
-  var words = ['オラ', 'ドド', 'ドドド', 'ゴ', 'オラオラ'];
+  var words = ['IO!', 'EIA!', 'HA!', '✠', 'VAE!'];
   ta.addEventListener('input', function () {
     count.textContent = ta.value.length + '/400';
-    if (++keys >= 14) {
+    if (++keys >= 30) {
       keys = 0;
-      FX.pop(words[Math.floor(Math.random() * words.length)], 120 + Math.random() * 640, 350 + Math.random() * 50, { size: 46 + Math.random() * 24 });
+      FX.pop(words[Math.floor(Math.random() * words.length)], 120 + Math.random() * 640, 350 + Math.random() * 50, { size: 30 + Math.random() * 14 });
     }
   });
 
   FX.beforeNav(document.getElementById('seal'), function () {
-    FX.invert(3); FX.lines(1000, { color: 'rgba(255,70,40,0.9)' }); FX.shake(500, 12);
-    FX.slam('ドン!', { sub: 'SEALED', color: '#FF3B30', size: 230, hold: 1000 });
+    FX.invert(1); FX.lines(1000, { color: 'rgba(255,70,40,0.8)' }); FX.shake(400, 10);
+    FX.slam('Signatvm', { sub: 'SEALED', color: '#FF5A40', size: 140, hold: 1000 });
   }, 1000);
 })();
 </script>

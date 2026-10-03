@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Verdict</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&amp;family=Dela+Gothic+One&amp;family=Doto:wght@700;900&amp;family=Jacquard+24&amp;family=Grenze+Gotisch:wght@500;700&amp;family=Jersey+10&amp;family=Special+Elite&amp;family=Workbench&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&amp;family=Doto:wght@700;900&amp;family=Jacquard+24&amp;family=Grenze+Gotisch:wght@500;700&amp;family=Jersey+10&amp;family=Special+Elite&amp;family=Workbench&amp;display=swap" rel="stylesheet">
 <style>
 body{margin:0;background:#070506}
 a{color:#F6D9C8}a:hover{color:#FFFFFF}
@@ -88,10 +88,10 @@ html,body{height:100%;overflow:hidden;background:#000}
 
 <div style="position: absolute; left: 520px; top: 12px; width: 400px; display: flex; flex-direction: column; align-items: center; gap: 4px">
 <h1 style="margin: 0; text-align: center; font-family: 'Jacquard 24', serif; font-weight: 400; font-size: 52px; line-height: 0.95; color: #F0D9A0; text-shadow: 0 4px 0 #000, 3px 0 0 rgba(255,40,140,0.4)">The Emperors Have Spoken</h1>
-<div style="font-size: 23px; color: #E8DCC0; text-shadow: 0 2px 0 #000"><span style="font-family: 'Jersey 10', sans-serif; font-size: 28px; color: #FF8FCB">NEROLAX</span> takes Rovnd III · 33 to 26</div>
+<div id="headline" style="font-size: 23px; color: #E8DCC0; text-shadow: 0 2px 0 #000"><span style="font-family: 'Jersey 10', sans-serif; font-size: 28px; color: #FF8FCB">NEROLAX</span> takes Rovnd III · 33 to 26</div>
 </div>
 
-<div class="shake" style="position: absolute; left: 44px; top: 248px; display: flex; flex-direction: column; align-items: flex-start">
+<div id="wound" class="shake" style="position: absolute; left: 44px; top: 248px; display: flex; flex-direction: column; align-items: flex-start">
 <span style="font-family: 'Doto', monospace; font-weight: 900; font-size: 118px; line-height: 1; color: #FF3B30; text-shadow: 4px 4px 0 #000, -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 0 24px rgba(255,40,30,0.7)">−31</span>
 <span style="font-size: 24px; color: #FFC2B8; text-shadow: 0 2px 0 #000">a grievous wound</span>
 </div>
@@ -159,6 +159,28 @@ html,body{height:100%;overflow:hidden;background:#000}
   }
   window.addEventListener('resize', fit); fit();
   var opts = {"mode": "verdict", "stations": true, "loser": "p1", "votes": ["p2", "p2", "tie", "p2"], "hype": 1};
+  // Prototype only: alternate a lost and a won round on each visit (?won=1 / ?won=0 forces one).
+  // The markup above is the lost round; a won round swaps sides. The server decides this for real.
+  var q = new URLSearchParams(location.search), won;
+  if (q.has('won')) won = q.get('won') !== '0';
+  else { try { won = localStorage.getItem('pc-won') !== '1'; localStorage.setItem('pc-won', won ? '1' : '0'); } catch (e) { won = false; } }
+  window.WON = won;
+  if (won) {
+    opts.loser = 'p2'; opts.votes = ['p1', 'p1', 'tie', 'p1'];
+    document.getElementById('headline').innerHTML = '<span style="font-family: \'Jersey 10\', sans-serif; font-size: 28px; color: #CFFF8A">VOVA_THE_BOLD</span> takes Rovnd III · 33 to 26';
+    var w = document.getElementById('wound');
+    w.style.left = 'auto'; w.style.right = '44px'; w.style.alignItems = 'flex-end';
+    var mine = document.querySelector('[aria-label="Your testimony, judged"]'), theirs = document.querySelector('[aria-label="Opponent testimony, judged"]');
+    var sm = mine.lastElementChild, st = theirs.lastElementChild, tmp = sm.textContent;
+    sm.textContent = st.textContent; st.textContent = tmp;
+    tmp = sm.style.cssText; sm.style.cssText = st.style.cssText; st.style.cssText = tmp;
+    var nm = mine.querySelector('[style*="Doto"]'), nt = theirs.querySelector('[style*="Doto"]');
+    tmp = nm.textContent; nm.textContent = nt.textContent; nt.textContent = tmp;
+    document.querySelectorAll('[aria-label="The emperors\' reasons"] span > span').forEach(function (sp, i, all) {
+      if (i % 2 === 0) { var t = sp.textContent; sp.textContent = all[i + 1].textContent; all[i + 1].textContent = t; }
+    });
+  }
+  if (q.get('mood')) opts.mood = q.get('mood');   // preview: ?mood=happy | mad | neutral
   opts.tv = document.getElementById('tv');
   window.arena = ArenaEngine.create(document.getElementById('stage'), opts);
 })();
@@ -167,16 +189,22 @@ html,body{height:100%;overflow:hidden;background:#000}
 (function () {
   FX.init();
   setTimeout(function () {
-    FX.invert(2); FX.lines(1000); FX.shake(600, 12);
-    FX.slam('ドン!', { sub: 'NEROLAX TAKES THE ROUND', color: '#FF4FB0', size: 220, hold: 1300 });
+    FX.invert(1); FX.lines(1000); FX.shake(500, 10);
+    if (window.WON) FX.slam('Io Triumphe!', { sub: 'VOVA_THE_BOLD TAKES THE ROUND', color: '#CFFF8A', size: 120, hold: 1300 });
+    else FX.slam('Vae Victis!', { sub: 'NEROLAX TAKES THE ROUND', color: '#FF6FC0', size: 130, hold: 1300 });
   }, 200);
-  FX.menace({ x: 1150, y: 150, w: 260, h: 220, color: '#FF4FB0', every: 300 });
-  FX.menace({ x: 40, y: 200, w: 300, h: 160, chars: 'ド', color: '#FF3B30', every: 600, min: 40, max: 60 });
+  if (window.WON) {
+    FX.menace({ x: 40, y: 150, w: 260, h: 220, color: '#B6FF4A', every: 700 });
+    FX.menace({ x: 1100, y: 200, w: 300, h: 160, chars: '†', color: '#FF3B30', every: 1400 });
+  } else {
+    FX.menace({ x: 1150, y: 150, w: 260, h: 220, color: '#FF4FB0', every: 700 });
+    FX.menace({ x: 40, y: 200, w: 300, h: 160, chars: '†', color: '#FF3B30', every: 1400 });
+  }
 
   FX.beforeNav(document.getElementById('next'), function (go) { FX.tbc(go); });
   FX.beforeNav(document.getElementById('yield'), function () {
     FX.invert(1); FX.shake(300, 6);
-    FX.slam('ガーン', { sub: 'YIELDED', color: '#9AA0B4', size: 190, hold: 900 });
+    FX.slam('Misericordia', { sub: 'YIELDED', color: '#9AA0B4', size: 110, hold: 900 });
   }, 900);
 })();
 </script>

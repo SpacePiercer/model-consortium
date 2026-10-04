@@ -166,7 +166,16 @@ prototypes pixel for pixel.
 - After every deploy run `.venv/bin/python scripts/smoke.py https://<your-app>`: two bots play a
   whole match and it fails loudly if websockets, judges or pictures are broken. (Against live
   judges the bots finish rounds in seconds, so Groq's 8000 tokens/min limit can abstain a judge
-  in round 4; real rounds are slower.)
+  in round 4; real rounds are slower.) The bots rejoin after a dropped connection, like the
+  browser, and the report lists every drop with its time and reason.
+- Live at https://prompt-colosseum.onrender.com (Render, free plan, one instance, branch `main`).
+  Render does not deploy on push by itself for this repo (it is not being notified), so a deploy
+  is the dashboard's Manual Deploy button, or automatic with `.github/workflows/deploy.yml`: it
+  calls the service's deploy hook on every push to `main` that changes the game (not docs, design,
+  tests or scripts). One-time setup needs repo admin: Render, the service, Settings, Deploy Hook,
+  copy the URL into a repo secret named `RENDER_DEPLOY_HOOK`; until then the workflow only warns.
+  Every deploy restarts the server and drops live matches, so on demo day disable the workflow
+  (Actions, Deploy to Render, "...", Disable workflow) and deploy by hand when nobody is playing.
 - Test the deploy on the venue Wi-Fi, and record a backup video.
 - Freeze the code about 3 h before judging.
 - Demo beats: a normal round, a bribe caught live, a wildcard round.

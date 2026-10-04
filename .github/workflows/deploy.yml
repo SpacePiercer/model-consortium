@@ -1,0 +1,53 @@
+# Deploys to Render whenever the game changes on main, by calling the service's deploy hook.
+#
+# One-time setup (needs repo admin, because it adds a secret):
+#   1. Render dashboard -> the prompt-colosseum service -> Settings -> Deploy Hook -> copy the URL.
+#   2. GitHub -> Settings -> Secrets and variables -> Actions -> New repository secret, named
+#      RENDER_DEPLOY_HOOK, with that URL as its value.
+# Never put the URL in the repo or in chat: anyone who has it can trigger deploys.
+#
+# A deploy restarts the server and drops every match in progress (rooms live in memory). To stop
+# automatic deploys, for example on demo day: Actions -> Deploy to Render -> "..." -> Disable
+# workflow. The "Run workflow" button deploys by hand, even while the push trigger is off.
+name: Deploy to Render
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "prompt-colosseum/**"
+      - "render.yaml"
+      # Not served, so changing them does not need a restart. Note that prompt-colosseum/app/prompts
+      # is read at runtime, so it deliberately still triggers a deploy.
+      - "!prompt-colosseum/docs/**"
+      - "!prompt-colosseum/design/**"
+      - "!prompt-colosseum/tests/**"
+      - "!prompt-colosseum/scripts/**"
+      - "!prompt-colosseum/PLAN.md"
+      - "!prompt-colosseum/CLAUDE.md"
+  workflow_dispatch:
+
+permissions: {}   # the job only calls a URL; it needs no access to the repository
+
+concurrency:
+  group: deploy-render
+  cancel-in-progress: false   # never cut a deploy request short
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ask Render to deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK is not set, so nothing was deployed. See the comments at the top of .github/workflows/deploy.yml."
+            # a push should not turn red just because setup is unfinished; a manual run should
+            [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && exit 1
+            exit 0
+          fi
+          curl -fsS --max-time 30 --retry 2 --retry-delay 3 -X POST "$HOOK"
+          echo
+          echo "Deploy requested for $GITHUB_SHA"

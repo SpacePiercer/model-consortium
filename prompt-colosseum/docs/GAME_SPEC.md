@@ -5,16 +5,20 @@
 1. **Lobby.** A player creates a room (gets a 4-letter code) or joins one. The match is always
    the 5 rounds below, with fixed time and length limits. The Emperors seated are the judges
    registered on the server, topped up to 4 with random-score fakes (see `docs/JUDGES.md`).
-2. **Round start.** Server picks an unused offering and broadcasts it. The timer starts on the
-   server. Both players type their "testimonium", up to the round's character limit.
+2. **Round start.** Server picks an unused offering and broadcasts it. A task card shows the
+   round's job for 5 s (`BRIEF_S`, with a draining line); the writing clock starts after it, so the
+   full time is kept. Both players type their "testimonium", up to the round's character limit.
 3. **Seal.** A player presses Seal to lock their prompt. The opponent only sees that it is
    sealed and when. When both are sealed, or the hourglass empties, the round closes. An
    empty prompt at time-out counts as an empty submission (it will score 0).
 4. **Judgement.** Server sends the offering (and its hidden checklist) and both prompts to every
    seated Emperor in parallel. Round 5 has no judges: the server scores the picks.
-5. **Verdict.** Scores are summed, damage and healing applied, verdict broadcast. The verdict
-   shows the two prompts side by side and each Emperor's one-line remark. After ~8 s (or both
-   press Next, after using /compact or /clear if they want to), the next round starts.
+5. **Verdict.** Scores are summed, damage and healing applied, verdict broadcast. The verdict is a
+   table, an Emperor per row and a gladiator per column: each Emperor's face falls into the column
+   of the gladiator they picked (a tied Emperor's side is a coin flip, shown as a spinning coin),
+   then one line names the winner and the damage. Prompts, scores and remarks wait for the match
+   report. After ~12 s (`VERDICT_S`, or both press Next, after /compact or /clear if they want),
+   the next round starts.
 6. **Match end.** All 5 rounds always play. Nobody drops below 1 HP before round 5. After
    round 5 the player with more HP wins; equal HP is a draw.
 
@@ -85,8 +89,9 @@ Client → server
 |---|---|
 | `room:create` | `{ name }` |
 | `room:join` | `{ code, name }` |
+| `room:solo` | `{ name? }` (the `/solo` page: a private room against the bot "Machina", started at once; the bot seals a plain prompt partway through each round, picks a random card in round 5 and is always ready for Next) |
 | `room:start` | `{}` (host, once both players are in; starts the countdown) |
-| `room:rejoin` | `{ code, playerId }` (after a refresh or a dropped connection, within the grace) |
+| `room:rejoin` | `{ code, playerId }` (after a refresh or a dropped connection; accepted until the next round starts) |
 | `round:draft` | `{ text }` (optional, throttled; lets the server auto-submit on time-out) |
 | `round:seal` | `{ text }` |
 | `round:choose` | `{ model }` (round 5 only; a key of `MODELS`) |
@@ -100,11 +105,11 @@ Server → client
 |---|---|
 | `room:joined` | `{ code, you, token, name }` (private, to a new or rejoining player: `you` is `"p1"` or `"p2"`, and `token` is the `playerId` that `room:rejoin` needs; nobody else ever sees it) |
 | `room:state` | `{ code, players: [{ id, name, hp, connected, context }], phase, round, rounds }` (`id` is the public slot `"p1"` / `"p2"`, the same keys the verdict uses; `context` is the bar, 0 to 1) |
-| `round:start` | `{ round, kind, title, brief, maxChars, endsAt, serverNow, offering: { id, url \| task }, options, optionLabels, wildcard }` (endsAt and serverNow = server epoch ms, so the client can correct for clock skew; `options` = 4 model keys and `optionLabels` their names, round 5 only; `wildcard` = `{ id, title, rule }` or null). Sent again to a rejoining player with `you: { text, pick }` and `sealed: { p1, p2 }` added. |
+| `round:start` | `{ round, kind, title, brief, maxChars, briefEndsAt, endsAt, serverNow, offering: { id, url \| task }, options, optionLabels, wildcard }` (briefEndsAt, endsAt and serverNow = server epoch ms, so the client can correct for clock skew; the task card shows until briefEndsAt, the clock runs from there to endsAt; `options` = 4 model keys and `optionLabels` their names, round 5 only; `wildcard` = `{ id, title, rule }` or null). Sent again to a rejoining player with `you: { text, pick }` and `sealed: { p1, p2 }` added. |
 | `round:sealed` | `{ playerId, at }` |
 | `round:judging` | `{}` |
 | `round:verdict` | see below |
-| `match:end` | `{ winnerId, reason: "hp" \| "yield" \| "disconnect", final: [{ id, hp }] }` (winnerId null = draw) |
+| `match:end` | `{ winnerId, reason: "hp" \| "yield" \| "disconnect", final: [{ id, hp }], history }` (winnerId null = draw; `history` = every round's verdict payload plus `title` and `task`, for the "Acta Ludorum" report) |
 | `error` | `{ message }` |
 
 `round:verdict` payload:
@@ -129,11 +134,16 @@ Server → client
 }
 ```
 
+Each entry in `emperors` also has `pick` (the column the face falls into: the vote, or a coin flip
+when the vote is `tie`; null for an abstainer) and `coin` (true when a coin decided). The coin is
+display only: damage uses the totals and the crit uses the real votes.
+
 Extra verdict fields: `dmg` (`{ p1, p2 }`, the HP each player lost; `damage` is the larger one and
 `loser` the player who lost more, or null when equal), `forfeit` (`"p1"` or `"p2"`, only when a
 disconnect cost them the round), and in round 5 `picks` (the model each player chose), `correct`
 (the right pickers, fastest first) and `answer` (the top-fit model keys). In round 5 `prompts`
-holds the picked model's name and `emperors` is empty. A rotted player's scores (context bar above
+holds the picked model's name, `totals` holds each pick's 0-10 `fit` score (shown on the papers),
+and `emperors` is empty. A rotted player's scores (context bar above
 85%) count x0.8 in `totals` and in each Emperor's vote, while the per-Emperor numbers shown stay raw.
 
 ## Phases (per room)
@@ -142,12 +152,15 @@ holds the picked model's name and `emperors` is empty. A rotted player's scores 
 
 ## Edge cases
 
-- Disconnect (any phase): 20 s grace to `room:rejoin`. After that the player loses the current
-  round: 40 × the round's multiplier damage, no crit. If they are still gone when the next round
-  starts, they lose the match (`match:end` reason `disconnect`).
+- Disconnect during writing or judging: 20 s grace to `room:rejoin`. After that the player loses
+  the current round: 40 × the round's multiplier damage (round 5: × 1, so 40), no crit. They can
+  still rejoin until the next round starts; the forfeited round stays lost.
+- Disconnect during a verdict costs nothing by itself.
+- Anyone still gone when the next round starts loses the match (`match:end` reason `disconnect`).
 - Yield: the player loses the match at once (`match:end` reason `yield`).
 - A lobby or countdown that loses a player (grace ran out) or everyone: the remaining player gets
-  an `error` ("The match was abandoned.") and the room is deleted.
+  an `error` ("The match was abandoned.") and the room is deleted; the client clears its saved
+  session and returns to the lobby's entry form.
 - `/compact` and `/clear` are accepted only on a verdict screen before round 5, once per player per
   round. A pending `/clear` penalty is used up by the next sweep that would have healed.
 - Double seal: ignore after the first.

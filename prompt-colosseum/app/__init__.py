@@ -23,6 +23,7 @@ def create_app(clock=None, judge=None):
     events.register(app.socketio, app.registry)
 
     @app.get("/")
+    @app.get("/solo")                           # play alone against the bot
     def index():
         from . import judges
         seats = [{"name": s.name, "model": s.judge.label} for s in judges.get_seats()]

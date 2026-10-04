@@ -69,6 +69,16 @@ def register(socketio, registry):
         join_room(room.code)
         room.hello(p.slot)
 
+    @on("room:solo")
+    def solo(d):
+        if registry.lookup(request.sid):
+            raise GameError("You are already in a room.")
+        room, p = registry.solo(request.sid, d.get("name"))
+        registry.bind(request.sid, room.code, p.slot)
+        join_room(room.code)
+        room.hello(p.slot)
+        room.start("p1")                        # the bot is always ready: no Begin button
+
     @on("room:rejoin")
     def rejoin(d):
         code = str(d.get("code", "")).strip().upper()

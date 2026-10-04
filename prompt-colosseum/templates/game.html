@@ -42,6 +42,7 @@
 <input id="matchcode" maxlength="4" placeholder="MATCH CODE" autocomplete="off" style="flex: 1; min-width: 0; height: 58px; box-sizing: border-box; padding: 0 14px; background: #0E0A08; color: #F0D9A0; border: 2px solid #5A4632; font-family: 'Doto', monospace; font-weight: 900; font-size: 24px; letter-spacing: 4px; text-transform: uppercase">
 <button id="join" type="button" style="height: 58px; padding: 0 22px; cursor: pointer; font-family: 'Jersey 10', sans-serif; font-size: 32px; color: #F0D9A0; background: #2A1F15; border: 2px solid #C9A46A; box-shadow: 0 4px 0 #000">JOIN</button>
 </div>
+<a href="/solo" style="height: 50px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-family: 'Grenze Gotisch', serif; font-size: 24px; color: #E8DCC0; background: rgba(0,0,0,0); border: 2px dashed #8A7556">Practice against the Machina</a>
 </section>
 
 <section id="waiting" hidden aria-label="Your room" style="position: absolute; left: 60px; top: 472px; width: 440px; box-sizing: border-box; padding: 22px; display: flex; flex-direction: column; gap: 14px; background: linear-gradient(180deg, rgba(42,34,28,0.94) 0%, rgba(22,17,13,0.94) 100%); border: 3px solid #5A4632; box-shadow: inset 0 0 0 2px #1a120c, inset 0 2px 0 rgba(255,230,190,0.12), 0 10px 24px rgba(0,0,0,0.6)">
@@ -117,44 +118,49 @@
 <button id="seal" type="button" style="position: absolute; left: 884px; top: 668px; width: 104px; height: 104px; border-radius: 50%; border: none; cursor: pointer; transform: rotate(-10deg); display: flex; align-items: center; justify-content: center; font-family: 'Grenze Gotisch', serif; font-weight: 700; font-size: 34px; color: #F6D9C8; background: radial-gradient(circle at 35% 30%, #D8483C 0%, #9A1C14 55%, #5A0E0A 100%); box-shadow: inset 0 0 0 6px rgba(90,14,10,0.6), 6px 8px 0 rgba(0,0,0,0.6); text-shadow: 0 2px 0 #3a0806">Seal</button>
 
 <div id="deliberate" hidden style="position: absolute; left: 60px; top: 380px; width: 880px; text-align: center; font-family: 'Jacquard 24', serif; font-size: 52px; color: #F0D9A0; text-shadow: 0 4px 0 #000">The Emperors deliberate…</div>
+
+<!-- the task card: the round's job, big, for BRIEF_S seconds before the clock starts -->
+<div id="card" hidden style="position: absolute; left: 0; top: 0; width: 1440px; height: 810px; z-index: 30; display: flex; align-items: center; justify-content: center; background: rgba(6,3,4,0.72)">
+<div style="position: relative; width: 980px; box-sizing: border-box; padding: 30px 50px 46px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; background: linear-gradient(180deg, #F6F0DE 0%, #E4DAC0 100%); box-shadow: inset 0 0 30px rgba(120,90,40,0.25), 14px 16px 0 rgba(0,0,0,0.6), 0 0 0 4px #1d1a16; overflow: hidden">
+<span id="card-round" style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 22px; letter-spacing: 6px; color: #8A5A30"></span>
+<span id="card-title" style="font-family: 'Jacquard 24', serif; font-size: 88px; line-height: 0.9; color: #5A1A12"></span>
+<span id="card-brief" style="font-size: 30px; line-height: 1.15; color: #6A1A12"></span>
+<img id="card-img" alt="" hidden style="max-width: 420px; max-height: 260px; box-shadow: 0 0 0 4px #1d1a16">
+<span id="card-task" style="font-family: 'Special Elite', monospace; font-size: 40px; line-height: 1.25; color: #1d1a16"></span>
+<span id="card-wild" hidden style="padding: 4px 14px; background: #5A0E0A; font-size: 26px; color: #FFC2B8"></span>
+<div aria-hidden="true" style="position: absolute; left: 0; bottom: 0; width: 100%; height: 12px; background: rgba(90,26,18,0.15)"><div id="card-bar" style="height: 100%; width: 100%; background: #9A1C14"></div></div>
+</div>
+</div>
 </div>
 
 <!-- ============================== VERDICT ============================== -->
+<!-- One table: an Emperor per row, a gladiator per column. Each face falls into the column of the
+     gladiator that Emperor picked (a coin decides a tie). Everything else waits for the report. -->
 <div id="verdict" class="screen" hidden>
 <div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 190px; background: linear-gradient(180deg, rgba(6,3,4,0.85) 0%, rgba(6,3,4,0) 100%)"></div>
 <div aria-hidden="true" style="position: absolute; left: 0; top: 650px; width: 100%; height: 160px; background: linear-gradient(180deg, rgba(6,3,4,0) 0%, rgba(6,3,4,0.5) 100%)"></div>
 
-<div style="position: absolute; left: 520px; top: 12px; width: 400px; display: flex; flex-direction: column; align-items: center; gap: 4px">
-<h1 id="vtitle" style="margin: 0; text-align: center; font-family: 'Jacquard 24', serif; font-weight: 400; font-size: 52px; line-height: 0.95; color: #F0D9A0; text-shadow: 0 4px 0 #000, 3px 0 0 rgba(255,40,140,0.4)">The Emperors Have Spoken</h1>
-<div id="vline" style="font-size: 23px; color: #E8DCC0; text-align: center; text-shadow: 0 2px 0 #000"></div>
-</div>
+<h1 id="vtitle" style="position: absolute; left: 470px; top: 14px; width: 500px; margin: 0; text-align: center; font-family: 'Jacquard 24', serif; font-weight: 400; font-size: 52px; line-height: 0.95; color: #F0D9A0; text-shadow: 0 4px 0 #000, 3px 0 0 rgba(255,40,140,0.4)">The Emperors Have Spoken</h1>
 
-<div id="dmgbox" class="shake" style="position: absolute; left: 44px; top: 248px; display: flex; flex-direction: column; align-items: flex-start">
+<section id="vtable" aria-label="The verdicts of the Emperors" style="position: absolute; left: 400px; top: 112px; width: 640px">
+<div aria-hidden="true" style="height: 14px; margin: 0 -12px; border-radius: 7px; background: linear-gradient(180deg, #8A5A30 0%, #3A2010 100%); box-shadow: 0 3px 4px rgba(0,0,0,0.5)"></div>
+<div style="padding: 6px 18px 10px; background: linear-gradient(90deg, #D9CDAE 0%, #EDE4CC 12%, #EDE4CC 88%, #D9CDAE 100%); box-shadow: inset 0 0 22px rgba(120,90,40,0.25)">
+<div style="display: grid; grid-template-columns: 170px 1fr 1fr; align-items: end; height: 54px; border-bottom: 3px double rgba(90,26,18,0.5)">
+<span></span>
+<span id="col-p1" style="text-align: center; font-family: 'Jersey 10', sans-serif; font-size: 38px; line-height: 1; color: #3E7A10; padding-bottom: 6px"></span>
+<span id="col-p2" style="text-align: center; font-family: 'Jersey 10', sans-serif; font-size: 38px; line-height: 1; color: #A0145E; padding-bottom: 6px"></span>
+</div>
+<div id="vrows"></div>
+</div>
+<div aria-hidden="true" style="height: 14px; margin: 0 -12px; border-radius: 7px; background: linear-gradient(180deg, #8A5A30 0%, #3A2010 100%); box-shadow: 0 3px 4px rgba(0,0,0,0.5)"></div>
+</section>
+
+<div id="vline" style="position: absolute; left: 320px; top: 590px; width: 800px; text-align: center; font-size: 34px; color: #F0E6CC; text-shadow: 0 3px 0 #000, 0 0 14px rgba(0,0,0,0.9); opacity: 0; transition: opacity .3s"></div>
+
+<div id="dmgbox" class="shake" style="position: absolute; left: 60px; top: 300px; display: flex; flex-direction: column; align-items: flex-start; opacity: 0; transition: opacity .2s">
 <span id="dmg" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 118px; line-height: 1; color: #FF3B30; text-shadow: 4px 4px 0 #000, -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 0 24px rgba(255,40,30,0.7)"></span>
 <span id="dmglabel" style="font-size: 24px; color: #FFC2B8; text-shadow: 0 2px 0 #000"></span>
 </div>
-<div id="tags" style="position: absolute; left: 44px; top: 380px; width: 360px; display: flex; flex-direction: column; gap: 2px; font-size: 21px; color: #FFE6A8; text-shadow: 0 2px 0 #000"></div>
-
-{% for s, x, num in [("p1", 180, "I"), ("p2", 1020, "II")] %}
-<section id="paper-{{ s }}" aria-label="Testimony {{ num }}, judged" style="position: absolute; left: {{ x }}px; top: 414px; width: 240px; height: 190px; box-sizing: border-box; padding: 10px 15px 18px; display: flex; flex-direction: column; gap: 4px; background: linear-gradient(180deg, #F3ECD8 0%, #E2D8BE 100%); box-shadow: inset 0 0 18px rgba(120,90,40,0.18), 4px 6px 14px rgba(0,0,0,0.55)">
-<div style="display: flex; justify-content: space-between; align-items: baseline">
-<span style="font-size: 19px; color: {{ '#6A1A12' if s == 'p1' else '#6A1A4A' }}">Testimonium {{ num }}</span>
-<span class="total" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 18px; color: {{ '#2E6A10' if s == 'p1' else '#A0145E' }}"></span>
-</div>
-<p class="text" style="margin: 0; overflow: hidden; font-family: 'Special Elite', monospace; font-size: 15px; line-height: 1.3; color: #1d1a16"></p>
-<span class="stamp" style="position: absolute; right: 10px; bottom: 14px; transform: rotate(-10deg); padding: 0 10px; font-family: 'Jacquard 24', serif; font-size: 34px; line-height: 1.1"></span>
-</section>
-<div aria-hidden="true" style="position: absolute; left: {{ x - 4 }}px; top: 592px; width: 268px; height: 18px; border-radius: 9px; background: linear-gradient(180deg, #4a4646 0%, #121010 55%, #2a2626 100%); box-shadow: 0 3px 4px rgba(0,0,0,0.6)"></div>
-{% endfor %}
-
-<section aria-label="The emperors' reasons" style="position: absolute; left: 470px; top: 458px; width: 500px">
-<div aria-hidden="true" style="height: 14px; margin: 0 -12px; border-radius: 7px; background: linear-gradient(180deg, #8A5A30 0%, #3A2010 100%); box-shadow: 0 3px 4px rgba(0,0,0,0.5)"></div>
-<div style="padding: 10px 20px 12px; display: flex; flex-direction: column; gap: 7px; background: linear-gradient(90deg, #D9CDAE 0%, #EDE4CC 12%, #EDE4CC 88%, #D9CDAE 100%); box-shadow: inset 0 0 22px rgba(120,90,40,0.25)">
-<h2 style="margin: 0; text-align: center; font-weight: 700; font-size: 30px; line-height: 1; color: #5A1A12">Acta Imperatorum</h2>
-<div id="acta" style="display: grid; grid-template-columns: 112px 52px minmax(0, 1fr); align-items: baseline; gap: 4px 10px; color: #1d1a16"></div>
-</div>
-<div aria-hidden="true" style="height: 14px; margin: 0 -12px; border-radius: 7px; background: linear-gradient(180deg, #8A5A30 0%, #3A2010 100%); box-shadow: 0 3px 4px rgba(0,0,0,0.5)"></div>
-</section>
 
 <div id="vbuttons" style="position: absolute; left: 270px; top: 718px; width: 900px; display: flex; justify-content: center; gap: 18px">
 <button id="compact" type="button" class="btn-dark" title="Halve your context bar. Heals 10 HP at 60-85% full, 3 HP otherwise.">/compact</button>
@@ -163,10 +169,26 @@
 <button id="yield" type="button" class="btn-dark">Yield</button>
 </div>
 
-<div id="endbox" hidden style="position: absolute; left: 470px; top: 690px; width: 500px; display: flex; flex-direction: column; align-items: center; gap: 10px">
+<div id="endbox" hidden style="position: absolute; left: 320px; top: 650px; width: 800px; display: flex; flex-direction: column; align-items: center; gap: 10px">
 <span id="endtext" style="font-family: 'Jacquard 24', serif; font-size: 54px; line-height: 1; color: #F0D9A0; text-shadow: 0 4px 0 #000"></span>
-<button id="again" type="button" class="btn-brass">Back to the Lobby</button>
+<div style="display: flex; gap: 18px">
+<button id="report-open" type="button" class="btn-brass">Acta Ludorum</button>
+<button id="again" type="button" class="btn-dark">Back to the Lobby</button>
 </div>
+</div>
+
+<!-- the match report: every round in full, opened from the end screen -->
+<section id="report" hidden aria-label="Acta Ludorum, the records of the games" style="position: absolute; left: 140px; top: 40px; width: 1160px; height: 730px; z-index: 50; display: flex; flex-direction: column">
+<div aria-hidden="true" style="height: 18px; margin: 0 -14px; border-radius: 9px; background: linear-gradient(180deg, #8A5A30 0%, #3A2010 100%); box-shadow: 0 3px 4px rgba(0,0,0,0.5)"></div>
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 30px 16px; background: linear-gradient(90deg, #D9CDAE 0%, #EDE4CC 8%, #EDE4CC 92%, #D9CDAE 100%); box-shadow: inset 0 0 30px rgba(120,90,40,0.3), 0 20px 50px rgba(0,0,0,0.8)">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<h2 style="margin: 0; font-family: 'Jacquard 24', serif; font-weight: 400; font-size: 54px; line-height: 1; color: #5A1A12">Acta Ludorum</h2>
+<button id="report-close" type="button" class="btn-dark" style="height: 48px; font-size: 26px">Claudere</button>
+</div>
+<div id="report-body" style="flex: 1; min-height: 0; overflow-y: auto; margin-top: 10px; padding-right: 10px; color: #1d1a16"></div>
+</div>
+<div aria-hidden="true" style="height: 18px; margin: 0 -14px; border-radius: 9px; background: linear-gradient(180deg, #8A5A30 0%, #3A2010 100%); box-shadow: 0 3px 4px rgba(0,0,0,0.5)"></div>
+</section>
 </div>
 
 <!-- ============ HUD: both gladiators, shared by battle and verdict ============ -->

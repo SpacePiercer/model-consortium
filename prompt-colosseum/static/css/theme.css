@@ -68,11 +68,10 @@ textarea::selection { background: #5A1A12; color: #F1EAD6; }
   70% { opacity: 1; transform: translateY(0) scale(1.15) rotate(4deg); }
   85% { transform: translateY(0) scale(.92, 1.08) rotate(-2deg); }
   100% { transform: none; } }
-.coin { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #FFF1B0 0%, #E3B23C 45%, #8A5A10 100%); box-shadow: 0 0 0 3px #5A3A08, 4px 5px 0 rgba(0,0,0,0.5);
-  display: flex; align-items: center; justify-content: center; font-family: 'Cinzel Decorative', serif; font-weight: 900; font-size: 26px; color: #5A3A08;
-  animation: coin-flip .9s cubic-bezier(.3,.6,.4,1) both; }
-@keyframes coin-flip { 0% { transform: translateY(0) rotateX(0); } 50% { transform: translateY(-70px) rotateX(900deg); } 100% { transform: translateY(0) rotateX(1800deg); } }
+.vrow { position: relative; }
+.coin3d { position: absolute; top: 16px; width: 64px; height: 64px; transform-style: preserve-3d; z-index: 2; }
+.coin3d canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; image-rendering: pixelated; backface-visibility: hidden; }
+.coin3d .back { transform: rotateY(180deg); }
 #card-bar { transition-property: width; transition-timing-function: linear; }
 .report-round { padding: 12px 0 16px; border-bottom: 2px dashed rgba(90,26,18,0.35); }
 .report-round h3 { margin: 0 0 4px; font-weight: 700; font-size: 28px; color: #5A1A12; }

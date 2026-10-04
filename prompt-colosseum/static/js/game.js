@@ -265,17 +265,58 @@
   (() => {
     const E = window.EMPERORS, img = new Image();
     img.onload = () => {
-      // ponytail: per-face top edges hand-fitted to the current art (texels); redo if emperors.js is regenerated
-      const k = img.naturalWidth / E.w, S = 52, TOP = [30, 46, 26, 14];
-      E.faces.forEach((fx, i) => {
+      // Each face's box, laurel to chin, in texels: x, y, w, h. Every box is scaled to the same
+      // height, so the four faces look the same size although the caricatures are not.
+      // ponytail: hand-fitted to the current art; refit if tools/cut_emperors.py regenerates it
+      const BOX = [[8, 30, 54, 68], [56, 49, 48, 62], [101, 42, 46, 72], [147, 22, 50, 84]];
+      const k = img.naturalWidth / E.w, S = 96, H = 90;
+      BOX.forEach(([x, y, w, h], i) => {
         const c = document.createElement("canvas"); c.width = c.height = S;
-        const x0 = Math.max(0, Math.min(E.w - S, fx - S / 2));
-        c.getContext("2d").drawImage(img, x0 * k, (TOP[i] || 0) * k, S * k, S * k, 0, 0, S, S);
+        const g = c.getContext("2d"), dw = w * H / h;
+        g.imageSmoothingEnabled = false;
+        g.drawImage(img, x * k, y * k, w * k, h * k, (S - dw) / 2, (S - H) / 2, dw, H);
         faces[i] = c.toDataURL();
       });
     };
     img.src = E.src;
   })();
+
+  // ---- the coin for a tied Emperor: a pixel-art Roman coin, I on the front, II on the back ----
+  const coinSide = numeral => {
+    const N = 26, c = document.createElement("canvas"); c.width = c.height = N;
+    const g = c.getContext("2d"), img = g.createImageData(N, N), m = (N - 1) / 2;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const dx = x - m, dy = y - m, r = Math.hypot(dx, dy);
+      if (r > m + 0.4) continue;
+      const lit = 0.75 + 0.35 * ((-dx - dy) / (m * 1.6));            // light from the top left
+      const ring = r > m - 1.6 ? 0.62 : r > m - 3 ? 1.08 : 1;        // dark rim, bright lip
+      const bead = Math.abs(r - (m - 4)) < 0.7 && Math.round(Math.atan2(dy, dx) * 6 / Math.PI * 2) % 2 === 0;
+      const t = Math.max(0.4, Math.min(1.3, lit * ring * (bead ? 1.2 : 1)));
+      const o = (y * N + x) * 4;
+      img.data[o] = 227 * t; img.data[o + 1] = 172 * t; img.data[o + 2] = 60 * t; img.data[o + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    g.fillStyle = "#5A3A08"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.font = "bold 12px 'Cinzel Decorative', serif";
+    g.fillText(numeral, m + 0.5, m + 1);
+    return c;
+  };
+  const flipCoin = (row, pick) => {
+    const coin = el("div"); coin.className = "coin3d";
+    const front = coinSide("I"), back = coinSide("II");
+    front.className = "front"; back.className = "back";
+    coin.append(front, back);
+    coin.style.left = (170 + (row.offsetWidth - 170) / 2 - 32) + "px";
+    row.style.perspective = "500px";
+    row.append(coin);
+    const end = 1440 + (pick === "p2" ? 180 : 0);                 // lands showing I or II
+    coin.animate([
+      { transform: "translateY(0) rotateY(0deg)" },
+      { transform: "translateY(-90px) rotateY(" + end / 2 + "deg)", offset: 0.5 },
+      { transform: "translateY(0) rotateY(" + end + "deg)" }],
+      { duration: 1100, easing: "cubic-bezier(.3,.6,.4,1)", fill: "forwards" });
+    return coin;
+  };
 
   // ---- verdict: the table of faces, then the wound ----
   const wound = (d, crit) => crit ? "a critical blow" : d >= 40 ? "a mortal wound" : d >= 25 ? "a grievous wound"
@@ -309,12 +350,11 @@
       if (!e.pick) return;
       if (e.coin) {
         beat(at, () => {
-          const coin = el("div", "?"); coin.className = "coin"; row.style.position = "relative";
-          coin.style.left = (170 + (row.offsetWidth - 170) / 2) + "px";
-          row.append(coin);
-          beat(900, () => coin.remove());
+          const coin = flipCoin(row, e.pick);
+          beat(1100, () => FX.shake(120, 4));                    // it lands...
+          beat(1600, () => coin.remove());                       // ...shows its side, then goes
         });
-        at += 900;
+        at += 1600;
       }
       beat(at, () => {
         const f = document.createElement("img");
@@ -382,10 +422,13 @@
   socket.on("match:end", m => {
     stopTimer(); hush(); forget();
     history = m.history || [];
-    if (screen !== "verdict") {   // yield or flight mid-round: show the end over the verdict layout
-      show("verdict");
-      $("vrows").replaceChildren(); $("vline").replaceChildren(); $("dmg").textContent = ""; $("dmglabel").textContent = "";
-    }
+    show("verdict");
+    // the table now holds the final standing, not the last round
+    $("vrows").replaceChildren(el("div", nameOf("p1").toUpperCase() + " " + ((m.final.find(f => f.id === "p1") || {}).hp) + " HP  ·  " +
+      nameOf("p2").toUpperCase() + " " + ((m.final.find(f => f.id === "p2") || {}).hp) + " HP",
+      "padding: 26px 6px; font-family: 'Doto', monospace; font-weight: 900; font-size: 30px; color: #1d1a16; text-align: center"));
+    $("vline").replaceChildren(); $("dmg").textContent = ""; $("dmglabel").textContent = "";
+    $("dmgbox").style.opacity = 0; $("vline").style.opacity = 0;
     calm(); unTbc();
     m.final.forEach(f => { const p = players.find(x => x.id === f.id); if (p) p.hp = f.hp; });
     hud(false);

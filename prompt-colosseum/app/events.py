@@ -1,4 +1,6 @@
 """Socket.IO handlers: translate events into Room calls. The rules live in rooms.py."""
+import time
+
 from flask import request
 from flask_socketio import join_room, leave_room
 
@@ -22,6 +24,17 @@ def make_emit(socketio, registry):
 
 
 def register(socketio, registry):
+    # The "[sock]" lines show why a connection dropped and how fast the player came back.
+    born, dropped = {}, {}   # sid -> time it connected; (room, slot) -> time it dropped
+    # ponytail: `dropped` keeps one entry per player who never rejoined; a restart clears it
+
+    def log(message):
+        print("[sock]", message, flush=True)
+
+    @socketio.on("connect")
+    def hello(auth=None):
+        born[request.sid] = time.monotonic()
+
     def tell(message):
         socketio.emit("error", {"message": message}, to=request.sid)
 
@@ -84,14 +97,18 @@ def register(socketio, registry):
         code = str(d.get("code", "")).strip().upper()
         room = registry.get(code)
         if room is None:
+            log("room %s rejoin refused: the room is gone" % code)
             raise GameError("That room is gone.")
         join_room(code)                         # first, so the state broadcast reaches this socket too
         try:
             slot = room.rejoin(d.get("playerId"), request.sid)
-        except GameError:
+        except GameError as e:
             leave_room(code)
+            log("room %s rejoin refused: %s" % (code, e))
             raise
         registry.bind(request.sid, code, slot)
+        t = dropped.pop((code, slot), None)
+        log("room %s %s rejoined%s" % (code, slot, "" if t is None else " after %.1fs" % (time.monotonic() - t)))
 
     @on("room:start")
     def start(d):
@@ -130,7 +147,14 @@ def register(socketio, registry):
 
     @socketio.on("disconnect")
     def gone(reason=None):
+        now = time.monotonic()
+        lived = now - born.pop(request.sid, now)
         found = registry.lookup(request.sid)
         registry.unbind(request.sid)
         if found:
-            found[0].disconnect(found[1], request.sid)
+            room, slot = found
+            dropped[(room.code, slot)] = now
+            log("room %s %s disconnected: %s (socket lived %.1fs, phase %s)" % (room.code, slot, reason, lived, room.phase))
+            room.disconnect(slot, request.sid)
+        else:
+            log("socket disconnected before joining a room: %s (lived %.1fs)" % (reason, lived))

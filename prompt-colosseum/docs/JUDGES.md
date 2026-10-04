@@ -50,9 +50,10 @@ Notes:
   where supported; otherwise rely on the schema in the prompt and parse defensively).
 - Randomize which player is A and which is B, independently per Emperor, to cancel position bias.
   Map back to p1/p2 after parsing.
-- Timeout 15 s (`OLLAMA_TIMEOUT_S`, default 90 s, for the local seat); the whole panel has a
-  20 s deadline that stretches to the longest seat timeout + 5 s. One retry on any failure (bad
-  JSON, HTTP error, timeout), except a rate limit. Otherwise the Emperor abstains. If every
+- Timeout 12 s, `JUDGE_TIMEOUT_S` (`OLLAMA_TIMEOUT_S`, default 90 s, for the local seat); the whole panel has a
+  20 s deadline that stretches to the longest seat timeout + 5 s. One retry on a failure (bad
+  JSON, HTTP error), except a rate limit or a timeout: a slow provider is no faster the second
+  time, so it abstains at once. Otherwise the Emperor abstains. If every
   Emperor abstains, the round counts as a tie.
 - After a 429 the provider cools down for its `retry-after` (at most 120 s) and sits out.
 
@@ -175,6 +176,6 @@ GROK_API_KEY=
 GROK_MODEL=
 OLLAMA_MODEL=             # e.g. gemma4:e4b; dev only
 OLLAMA_TIMEOUT_S=90
-JUDGE_TIMEOUT_S=15
+JUDGE_TIMEOUT_S=12
 # JUDGE_MAX_TOKENS=        # overrides every provider's limit (incl. Gemini's 2048); leave unset
 ```

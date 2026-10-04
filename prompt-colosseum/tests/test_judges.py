@@ -2,6 +2,7 @@
 import json
 import sys
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from unittest.mock import patch
@@ -223,6 +224,19 @@ def serve(respond):
 def reply(score_a, score_b):
     text = json.dumps({"A": {"score": score_a}, "B": {"score": score_b}, "remark": "r"})
     return {"choices": [{"message": {"content": text}}]}
+
+
+def test_a_timeout_abstains_without_a_retry():
+    srv, calls = serve(lambda b: (time.sleep(0.4), (200, reply(6, 4)))[1])
+    judge = judges.Judge("http-slow", "m", "http://127.0.0.1:%d" % srv.server_port, "k", 0.1)
+    try:
+        judges._ask(judge, "sys", "user")
+        assert False, "expected a timeout"
+    except judges.JudgeError as e:
+        assert "timed out" in str(e)
+    time.sleep(1.0)  # a retry would have reached the server by now
+    assert len(calls) == 1
+    srv.shutdown()
 
 
 def test_http_layer():

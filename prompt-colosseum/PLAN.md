@@ -105,7 +105,7 @@ prototypes pixel for pixel.
 **Done when:** two browser tabs play a full 5-round match from start to finish.
 
 ## Phase 3: Real judges
-- Parallel calls to every seated judge, 15 s per call, 20 s overall deadline, one retry
+- Parallel calls to every seated judge, 12 s per call, 20 s overall deadline, one retry (none after a timeout)
   on any failure except a rate limit. A judge that still fails abstains, and the totals are scaled up to make up for it.
   If every judge abstains, the round counts as a tie.
 - The local Ollama seat is for development only. It gets its own `OLLAMA_TIMEOUT_S=90`, and the

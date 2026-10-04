@@ -154,7 +154,7 @@ def _live_judges():
             extra = {"reasoning": {"enabled": False}}
             if len(models) > 1:
                 extra["models"] = models
-        out.append(Judge(name, model, url, key, float(os.getenv("JUDGE_TIMEOUT_S", "15")), extra, tokens))
+        out.append(Judge(name, model, url, key, float(os.getenv("JUDGE_TIMEOUT_S", "12")), extra, tokens))
     if os.getenv("OLLAMA_MODEL"):
         out.append(Judge("ollama", os.getenv("OLLAMA_MODEL"), "http://localhost:11434/v1", "ollama",
                          float(os.getenv("OLLAMA_TIMEOUT_S", "90"))))
@@ -237,7 +237,9 @@ def _ask(judge, system, content):
             return parse_reply(_chat(judge, messages, json_mode=attempt == 0))
         except RateLimited:
             raise
-        except Exception as e:  # ponytail: any failure retries once, then abstains
+        except httpx.TimeoutException:  # a slow provider is no faster the second time: abstain now
+            raise JudgeError("timed out after %gs" % judge.timeout)
+        except Exception as e:  # ponytail: any other failure retries once, then abstains
             err = e
     raise JudgeError(str(err) or type(err).__name__)
 

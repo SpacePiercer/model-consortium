@@ -60,7 +60,7 @@ scripts/smoke.py       # plays a whole match with two bots against any running s
    numbers are placeholders: rules, limits and numbers come from `docs/` and `app/rounds.py`.
 2. **Rooms.** Create/join by 4-letter code, two players max, server-authoritative timer,
    prompt submit is sealed (opponent sees only "sealed"). Fake judges that return random scores.
-3. **Real judges.** `judges.py` per `docs/JUDGES.md`: parallel calls, 15 s timeout, strict JSON,
+3. **Real judges.** `judges.py` per `docs/JUDGES.md`: parallel calls, 12 s timeout, strict JSON,
    one retry, abstain on failure, A/B order randomized per judge.
 4. **Verdict.** Aggregate, apply damage, broadcast verdict, drive the verdict screen
    (`ArenaEngine.set({ mode: 'verdict', loser, votes, hype: 1 })`), next round / match end.

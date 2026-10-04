@@ -126,6 +126,13 @@ def test_live_seats_fill_with_fakes():
         assert [s.judge.provider for s in judges.build_seats("live")] == ["fake"] * 4
 
 
+def test_openrouter_turns_thinking_off_and_keeps_fallbacks():
+    env = {"OPENROUTER_API_KEY": "k", "OPENROUTER_MODELS": "a/x:free, b/y:free"}
+    with patch.dict("os.environ", env, clear=True):
+        j = judges.real_seats()[0].judge
+    assert j.model == "a/x:free" and j.extra == {"reasoning": {"enabled": False}, "models": ["a/x:free", "b/y:free"]}
+
+
 def test_probe_and_calibrate_see_real_judges_only():
     env = {"GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-x"}
     with patch.dict("os.environ", env, clear=True):

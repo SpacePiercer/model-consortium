@@ -133,6 +133,29 @@ def test_openrouter_turns_thinking_off_and_keeps_fallbacks():
     assert j.model == "a/x:free" and j.extra == {"reasoning": {"enabled": False}, "models": ["a/x:free", "b/y:free"]}
 
 
+def test_each_lab_sits_in_its_own_ceos_chair():
+    env = {k: "x" for k in ("GEMINI_API_KEY", "GEMINI_MODEL", "GROQ_API_KEY", "GROQ_MODEL", "ANTHROPIC_API_KEY",
+                            "ANTHROPIC_MODEL", "OPENAI_API_KEY", "OPENAI_MODEL", "GROK_API_KEY", "GROK_MODEL")}
+    with patch.dict("os.environ", env, clear=True):
+        seats = judges.build_seats("live")
+    # Gemini and Groq are nobody's lab, so Gemini takes the one chair left; Groq has no chair
+    assert {s.id: s.judge.provider for s in seats} == {
+        "amodei": "anthropic", "altman": "openai", "zuckerberg": "gemini", "musk": "xai"}
+    del env["ANTHROPIC_API_KEY"]  # no Claude key: Amodei's chair goes to the first other judge
+    with patch.dict("os.environ", env, clear=True):
+        assert {s.id: s.judge.provider for s in judges.build_seats("live")}["amodei"] == "gemini"
+
+
+def test_requesty_takes_the_seat_after_groq_and_openrouter():
+    env = {"GEMINI_API_KEY": "k", "GEMINI_MODEL": "g", "REQUESTY_API_KEY": "k", "REQUESTY_MODEL": "openai/gpt-4.1-mini"}
+    with patch.dict("os.environ", env, clear=True):
+        seats = judges.build_seats("live")
+    assert [s.judge.provider for s in seats] == ["gemini", "requesty", "fake", "fake"]
+    assert seats[1].judge.base_url == "https://router.requesty.ai/v1" and seats[1].judge.model == "openai/gpt-4.1-mini"
+    with patch.dict("os.environ", {**env, "OPENROUTER_API_KEY": "k", "OPENROUTER_MODELS": "a/x:free"}, clear=True):
+        assert [s.judge.provider for s in judges.build_seats("live")][:3] == ["gemini", "openrouter", "requesty"]
+
+
 def test_probe_and_calibrate_see_real_judges_only():
     env = {"GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-x"}
     with patch.dict("os.environ", env, clear=True):

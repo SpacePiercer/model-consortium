@@ -6,23 +6,24 @@ often; check each provider's current model list and limits before wiring a model
 
 `JUDGES=fake|live` in `.env` picks the mode. `fake` (the default, and always in pytest) seats
 judges that return random scores from a seeded RNG. `live` registers every provider that has a
-key, plus Ollama when `OLLAMA_MODEL` is set, in `PROVIDERS` order (gemini, groq, cloudflare,
-openrouter, openai, anthropic, then Ollama; at most 4); personas go to seats
-in that order. Seats left empty are filled with random-score fake judges, so the panel is always 4.
+key and a model, plus Ollama when `OLLAMA_MODEL` is set, and seats them like this:
 
-| Seat | Persona | Provider | OpenAI-compatible base URL (verify) |
-|---|---|---|---|
-| amodei | Amodei | Google AI Studio (Gemini Flash) | `https://generativelanguage.googleapis.com/v1beta/openai/` |
-| altman | Altmanvs | Groq (a vision model; `render.yaml` sets `GROQ_MODEL`) | `https://api.groq.com/openai/v1` |
-| zuckerberg | Zvckervs | Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1` |
-| musk | Mvscvs | OpenRouter (a `:free` vision model, with fallbacks) | `https://openrouter.ai/api/v1` |
-| (next) | next free persona | OpenAI (paid) | `https://api.openai.com/v1` |
-| (next) | next free persona | Anthropic (paid, OpenAI-compatible beta) | `https://api.anthropic.com/v1` |
-| (dev) | next free persona | Ollama, local (`gemma4:e4b`), optional dev seat | `http://localhost:11434/v1` |
+| Chair | Persona | Seated when keyed |
+|---|---|---|
+| amodei | Amodei | Anthropic (`claude-haiku-4-5-20251001`; OpenAI-compatible beta endpoint) |
+| altman | Altmanvs | OpenAI (`gpt-4.1-mini`) |
+| zuckerberg | Zvckervs | Cloudflare Workers AI, running Llama (`CF_MODEL=@cf/meta/llama-4-scout-17b-16e-instruct`). Meta has no API of its own since the Llama API shut down in July 2026 |
+| musk | Mvscvs | xAI Grok (`GROK_API_KEY`, `GROK_MODEL=grok-4-1-fast-non-reasoning`) |
 
-Personas are positional: the table shows the default order, but each registered provider simply
-takes the next persona. With only Gemini and OpenRouter keyed, OpenRouter sits as Altmanvs. To pick
-who sits when more than 4 are keyed, leave the others' keys out of `.env`.
+A keyed lab takes its own CEO's chair (`HOME` in `app/judges.py`). Providers with no chair of their
+own (Gemini, Groq, OpenRouter, Requesty, Ollama; in that order) fill the chairs that are left, and
+any chair still empty gets a random-score fake, so the panel is always 4. A provider with a key
+but no credit would take a chair and abstain every round, so leave its `_MODEL` line empty until it
+has credit. Base URLs, all OpenAI-compatible: Gemini `https://generativelanguage.googleapis.com/v1beta/openai/`,
+Groq `https://api.groq.com/openai/v1`, Cloudflare `https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1`,
+OpenRouter `https://openrouter.ai/api/v1`, Requesty `https://router.requesty.ai/v1` (HTTP 402 until the
+account has credit), OpenAI `https://api.openai.com/v1`, Anthropic `https://api.anthropic.com/v1`,
+xAI `https://api.x.ai/v1`, Ollama `http://localhost:11434/v1`.
 
 All of them speak the OpenAI chat-completions format, so one client with a swappable `base_url`,
 `api_key` and `model` covers them. Put the model IDs in `.env`, not in code.
@@ -164,10 +165,14 @@ CF_API_TOKEN=
 CF_MODEL=
 OPENROUTER_API_KEY=
 OPENROUTER_MODELS=        # comma-separated, first is primary
+REQUESTY_API_KEY=
+REQUESTY_MODEL=           # e.g. openai/gpt-4.1-mini
 OPENAI_API_KEY=
 OPENAI_MODEL=
 ANTHROPIC_API_KEY=
 ANTHROPIC_MODEL=
+GROK_API_KEY=
+GROK_MODEL=
 OLLAMA_MODEL=             # e.g. gemma4:e4b; dev only
 OLLAMA_TIMEOUT_S=90
 JUDGE_TIMEOUT_S=15

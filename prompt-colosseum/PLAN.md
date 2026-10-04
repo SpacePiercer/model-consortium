@@ -241,6 +241,7 @@ These fill gaps in `docs/GAME_SPEC.md`. They're used unless you veto them before
 | Groq | console.groq.com/keys | Free | `GROQ_API_KEY`, `GROQ_MODEL` |
 | Cloudflare Workers AI | dash.cloudflare.com: Account ID, plus an API token from the "Workers AI" template | Free daily allowance | `CF_ACCOUNT_ID`, `CF_API_TOKEN`, `CF_MODEL` |
 | OpenRouter | openrouter.ai/settings/keys | Free models, ~50 requests/day without credits | `OPENROUTER_API_KEY`, `OPENROUTER_MODELS` |
+| Requesty | app.requesty.ai (API keys, and top up under Settings, Billing) | Paid; `openai/gpt-4.1-mini` is about $0.0008 per judge call | `REQUESTY_API_KEY`, `REQUESTY_MODEL` |
 | OpenAI | platform.openai.com/api-keys | Paid | `OPENAI_API_KEY`, `OPENAI_MODEL` |
 | Anthropic | console.anthropic.com, under API Keys | Paid | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` |
 | Ollama (local, dev only) | Already installed; `gemma4:e4b` is pulled | Free, slow on CPU | `OLLAMA_MODEL`, `OLLAMA_TIMEOUT_S` |

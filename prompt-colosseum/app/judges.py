@@ -59,10 +59,17 @@ PROVIDERS = [
     ("groq", "https://api.groq.com/openai/v1", "GROQ_API_KEY", "GROQ_MODEL"),
     ("cloudflare", "https://api.cloudflare.com/client/v4/accounts/{}/ai/v1", "CF_API_TOKEN", "CF_MODEL"),
     ("openrouter", "https://openrouter.ai/api/v1", "OPENROUTER_API_KEY", "OPENROUTER_MODELS"),
+    ("requesty", "https://router.requesty.ai/v1", "REQUESTY_API_KEY", "REQUESTY_MODEL"),
     ("openai", "https://api.openai.com/v1", "OPENAI_API_KEY", "OPENAI_MODEL"),
     # ponytail: Anthropic's OpenAI-compatible endpoint is a beta; the probe shows if it behaves.
     ("anthropic", "https://api.anthropic.com/v1", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL"),
+    ("xai", "https://api.x.ai/v1", "GROK_API_KEY", "GROK_MODEL"),
 ]
+
+# A keyed lab sits in its own CEO's chair; every other judge takes an empty chair in PROVIDERS
+# order. Meta has no API of its own (Llama API shut down July 2026), so Zvckervs is a Llama model
+# on Cloudflare Workers AI: set CF_MODEL=@cf/meta/llama-4-scout-17b-16e-instruct.
+HOME = {"anthropic": "amodei", "openai": "altman", "cloudflare": "zuckerberg", "xai": "musk"}
 
 QUIPS = [
     "Both found the moon. Only one found the lens.",
@@ -134,6 +141,8 @@ def _live_judges():
         tokens = 400
         if name == "gemini":  # thinking spends max_tokens before the answer, so it needs headroom
             extra, tokens = {"reasoning_effort": "low"}, 2048  # ponytail: "low" is fast enough
+        if name == "anthropic":  # Claude's JSON is wordier and 400 sometimes cut it off mid-reply
+            tokens = 800
         if name == "cloudflare":
             if not os.getenv("CF_ACCOUNT_ID"):
                 continue
@@ -155,10 +164,12 @@ def _live_judges():
 def build_seats(mode=None):
     mode = mode or os.getenv("JUDGES", "fake")
     seed = int(os.getenv("FAKE_SEED", "0"))
-    judges = [] if mode == "fake" else _live_judges()[:4]
-    # Fewer than 4 real judges: random-score fakes fill the empty thrones.
-    judges += [Judge("fake", "fake", rng=random.Random(seed + i)) for i in range(len(judges), 4)]
-    return [Seat(*EMPERORS[i], judge=j) for i, j in enumerate(judges)]
+    live = [] if mode == "fake" else _live_judges()
+    home = {HOME[j.provider]: j for j in live if j.provider in HOME}
+    rest = iter([j for j in live if j.provider not in HOME])
+    # An empty chair with no judge left for it gets a random-score fake.
+    return [Seat(eid, name, home.get(eid) or next(rest, None) or Judge("fake", "fake", rng=random.Random(seed + i)))
+            for i, (eid, name) in enumerate(EMPERORS)]
 
 
 def real_seats():
@@ -362,9 +373,12 @@ def probe(argv):
     _seats = real_seats()
     judges = _live_judges()
     print("Registered judges (the probe always runs live):")
-    for i, j in enumerate(judges):
-        seat = EMPERORS[i][1] if i < 4 else "(no throne)"
-        print("  %-12s %-11s %s" % (seat, j.provider, j.model))
+    for s in _seats:
+        print("  %-12s %-11s %s" % (s.name, s.judge.provider, s.judge.model))
+    seated = {s.judge.provider for s in _seats}
+    for j in judges:
+        if j.provider not in seated:
+            print("  %-12s %-11s %s" % ("(no throne)", j.provider, j.model))
     have = {j.provider for j in judges}
     for name, _, key_env, model_env in PROVIDERS:
         if name not in have:

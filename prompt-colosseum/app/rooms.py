@@ -23,12 +23,15 @@ from . import judges, rounds
 
 COUNTDOWN_S = 3      # lobby -> first round
 BRIEF_S = 5          # the task card shows this long before the writing clock starts
+WILD_S = 3           # then a wildcard, if the round drew one, gets its own announcement this long
 VERDICT_S = 12       # a verdict stays up this long unless both players press Next (the faces fall)
 GRACE_S = 20         # time to reconnect before a gone player forfeits the round
 MAX_HP = 100
 TIE_DAMAGE = 5       # a tied round, or every judge failing: both take this
 FORFEIT_DAMAGE = 40  # times the round's multiplier, no crit
 CRIT = 1.25          # a unanimous verdict
+HURRY_HP = 1         # once one player seals, the other bleeds this much HP a second until they do
+HURRY_MAX = 20       # but at most this much a round, so a blank instant seal is not a weapon
 NAME_MAX = 16
 TOTAL = len(rounds.ROUNDS)
 SLOTS = ("p1", "p2")
@@ -117,10 +120,12 @@ class Player:
     ready: bool = False
     reset_used: bool = False
     forfeit: bool = False
+    bled: int = 0         # HP lost this round waiting to seal after the other did
 
     def new_round(self):
         self.draft, self.sealed, self.pick, self.at = "", None, None, None
         self.ready = self.reset_used = self.forfeit = False
+        self.bled = 0
 
 
 def locked(fn):
@@ -147,6 +152,7 @@ class Room:
         self.rnd = self.offering = self.wildcard = self.options = None
         self.ends_at = 0                        # epoch ms
         self.brief_ends = 0                     # epoch ms: the task card goes, the clock starts
+        self.wild_at = None                     # epoch ms: the task card gives way to the wildcard
         self.history = []                       # every verdict, for the match report
         self.used = set()                       # offering ids already played
         self.verdict = self.final = None        # kept so a rejoining player can be caught up
@@ -189,6 +195,7 @@ class Room:
             offering["task"] = o["task"]       # never the hidden checklist: that is for the judges
         return {"round": self.round_no, "kind": rnd["kind"], "title": rnd["title"], "brief": rnd["brief"],
                 "maxChars": rnd.get("max_chars", 0), "endsAt": self.ends_at, "briefEndsAt": self.brief_ends,
+                "wildcardAt": self.wild_at,
                 "serverNow": int(self.clock.now() * 1000), "offering": offering,
                 "options": self.options,
                 "optionLabels": {k: rounds.MODELS[k] for k in self.options} if self.options else None,
@@ -334,16 +341,19 @@ class Room:
             seconds //= 2
         self.options = rounds.options(offering) if rnd["kind"] == "choice" else None
         # ponytail: the card is client-side; the phase is already "writing" and an early seal counts
-        self.brief_ends = int((self.clock.now() + BRIEF_S) * 1000)
+        brief = BRIEF_S + (WILD_S if self.wildcard else 0)
+        now = self.clock.now()
+        self.wild_at = int((now + BRIEF_S) * 1000) if self.wildcard else None
+        self.brief_ends = int((now + brief) * 1000)
         self.ends_at = self.brief_ends + seconds * 1000
         for p in self.players.values():
             p.new_round()
         self._goto("writing")
         self.emit("round:start", self._start_payload())
         self._state()
-        self._later(BRIEF_S + seconds, self._close_writing)
+        self._later(brief + seconds, self._close_writing)
         if any(p.bot for p in self.players.values()):
-            self._later(BRIEF_S + seconds * self.rng.uniform(0.25, 0.6), self._bot_turn)
+            self._later(brief + seconds * self.rng.uniform(0.25, 0.6), self._bot_turn)
 
     @locked
     def draft(self, slot, text):
@@ -364,7 +374,8 @@ class Room:
         p.sealed, p.at = self._clip(text).strip(), int(self.clock.now() * 1000)
         self.emit("round:sealed", {"playerId": slot, "at": p.at})
         if all(q.sealed is not None for q in self.players.values()):
-            self._close_writing()
+            return self._close_writing()
+        self._hurry(other(slot))
 
     @locked
     def choose(self, slot, model):
@@ -381,7 +392,23 @@ class Room:
         p.pick, p.at = model, int(self.clock.now() * 1000)
         self.emit("round:sealed", {"playerId": slot, "at": p.at})
         if all(q.pick is not None for q in self.players.values()):
-            self._settle_choice()
+            return self._settle_choice()
+        self._hurry(other(slot))
+
+    def _hurry(self, slot):
+        """The other player has sealed: this one bleeds HURRY_HP a second until they seal too, the
+        round closes (the epoch moves on), or HURRY_MAX is gone. Never below 1 HP."""
+        self._later(1, self._bleed, slot)
+
+    def _bleed(self, slot):
+        p = self.players[slot]
+        if p.at is not None or p.bled >= HURRY_MAX or p.hp <= 1:
+            return
+        if self.clock.now() * 1000 > self.brief_ends:      # no bleeding while the task card is up
+            p.hp -= HURRY_HP
+            p.bled += HURRY_HP
+            self._state()
+        self._later(1, self._bleed, slot)
 
     def _on_time(self):
         if self.clock.now() * 1000 > self.ends_at:
@@ -477,6 +504,7 @@ class Room:
             "context": {s: self._ctx(p) for s, p in self.players.items()},
             "hp": {s: p.hp for s, p in self.players.items()},
             "prompts": {s: p.sealed if p.sealed is not None else p.draft for s, p in self.players.items()},
+            "bled": {s: p.bled for s, p in self.players.items()},
             "emperors": [],
         }
         payload.update(extra)

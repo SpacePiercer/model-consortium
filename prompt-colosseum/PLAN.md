@@ -148,8 +148,8 @@ prototypes pixel for pixel.
 **Done when:** a match ends on a winner screen, and Next and Yield both work.
 
 ## Phase 6: Polish (in this order; stop when time runs out)
-1. A judging animation, because the wait is 5–20 s. Today it's a "deliberating" note and one
-   burst of speed lines; build the rest from `fx.js` (menace glyphs).
+1. (done) A judging animation, because the wait is 5–20 s: a big modal with the Emperors' faces
+   nodding in turn, a rotating line and a seconds count.
 2. Sounds. (done) Screen shake and the slams are already driven from the server events.
 3. (done) Reconnect after a page refresh: the client saves its token and sends `room:rejoin`.
 4. Practice mode against the Emperors.

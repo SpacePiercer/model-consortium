@@ -114,8 +114,12 @@
       FX.invert(1); FX.lines(900); FX.shake(400, 8);
       FX.slam("Ad Arenam!", { sub: "TO THE ARENA", color: "#FFE14A", size: 130, hold: 900 });
     }
-    if (phase !== "verdict") hud(false);
-    else hud(true);
+    // while bleeding, each lost point pops by our HP bar; lost cells blink against the round's start
+    const mine = players.find(x => x.id === me);
+    if (mine && hurrying && phase === "writing" && mine.hp < lastHp)
+      FX.pop("−" + (lastHp - mine.hp), me === "p1" ? 500 : 900, 120, { size: 34, color: "#FF3B30" });
+    if (mine) lastHp = mine.hp;
+    hud(phase === "verdict" || phase === "writing");
   });
 
   // ---- battle ----
@@ -131,7 +135,7 @@
     img.src = url;
   };
 
-  let labels = {}, endsAt = 0, briefEnds = 0, skew = 0, tick = null, lastSec = -1, draftTimer = null, keys = 0, vanish = null, maxChars = 0;
+  let labels = {}, endsAt = 0, briefEnds = 0, wildAt = 0, skew = 0, tick = null, lastSec = -1, draftTimer = null, keys = 0, vanish = null, maxChars = 0;
   const serverNow = () => Date.now() + skew;
   // during the task card the clock shows the full writing time; it starts when the card goes
   const left = () => Math.max(0, Math.ceil((endsAt - Math.max(serverNow(), briefEnds)) / 1000));
@@ -149,29 +153,69 @@
   const count = () => { $("count").textContent = $("testimony").value.length + "/" + maxChars; };
 
   // timers that belong to one screen (the task card, the falling faces); a new event cancels them
-  let beats = [];
+  let beats = [], judgingTick = null;
   const beat = (ms, fn) => beats.push(setTimeout(fn, ms));
-  const hush = () => { beats.forEach(clearTimeout); beats = []; $("card").hidden = true; };
+  const hush = () => {
+    beats.forEach(clearTimeout); beats = [];
+    clearInterval(judgingTick); judgingTick = null;
+    ["card", "wildcard", "judging"].forEach(id => { $(id).hidden = true; });
+    stopHurry();
+  };
+  const drain = (bar, ms) => {
+    bar.style.transitionDuration = "0ms"; bar.style.width = "100%";
+    void bar.offsetWidth;                                   // restart the transition
+    bar.style.transitionDuration = ms + "ms"; bar.style.width = "0%";
+  };
 
-  // the task card: the round's job, big, until the clock starts; a red line drains underneath
+  // the task card: the round's job, big, until the clock starts; a red line drains underneath.
+  // A wildcard then gets its own announcement (the server leaves WILD_S for it before the clock).
   let unlock = () => {};
+  const opened = () => { unlock(); FX.lines(500); FX.shake(200, 6); };
+  const wildCard = (w, ms) => {
+    $("card").hidden = true;
+    $("wild-title").textContent = w.title;
+    $("wild-rule").textContent = w.rule;
+    drain($("wild-bar"), ms);
+    $("wildcard").hidden = false;
+    FX.invert(1); FX.lines(900, { color: "rgba(255,90,40,0.8)" }); FX.shake(450, 12);
+    beat(ms, () => { $("wildcard").hidden = true; opened(); });
+  };
   const taskCard = r => {
     const ms = briefEnds - serverNow();
     if (ms <= 0) return unlock();
+    const toWild = r.wildcard && wildAt ? wildAt - serverNow() : ms;
+    if (toWild <= 0) return wildCard(r.wildcard, ms);       // rejoined during the announcement
     const o = r.offering;
     $("card-round").textContent = "Rovnd " + ROMAN[r.round] + " of V";
     $("card-title").textContent = r.title;
     $("card-brief").textContent = r.brief;
     $("card-img").hidden = !o.url; if (o.url) $("card-img").src = o.url;
     $("card-task").hidden = !o.task; $("card-task").textContent = o.task || "";
-    $("card-wild").hidden = !r.wildcard;
-    $("card-wild").textContent = r.wildcard ? r.wildcard.title + ": " + r.wildcard.rule : "";
-    const bar = $("card-bar");
-    bar.style.transitionDuration = "0ms"; bar.style.width = "100%";
-    void bar.offsetWidth;                                   // restart the transition
-    bar.style.transitionDuration = ms + "ms"; bar.style.width = "0%";
+    drain($("card-bar"), toWild);
     $("card").hidden = false;
-    beat(ms, () => { $("card").hidden = true; unlock(); FX.lines(500); FX.shake(200, 6); });
+    if (r.wildcard && wildAt) beat(toWild, () => wildCard(r.wildcard, briefEnds - serverNow()));
+    else beat(ms, () => { $("card").hidden = true; opened(); });
+  };
+
+  // the other gladiator sealed first: we bleed a point a second (the server takes it) until we seal
+  let sealedBy = { p1: false, p2: false }, hurrying = false, lastHp = 100;
+  const startHurry = () => {
+    if (hurrying || sealedBy[me] || phase !== "writing") return;
+    hurrying = true;
+    $("hurry-text").textContent = nameOf(other(me)).toUpperCase() + " has sealed. −1 HP every second until you seal.";
+    $("hurry").hidden = false;
+    $("seal").classList.add("urgent");
+    FX.invert(1); FX.lines(900, { color: "rgba(255,40,30,0.8)" }); FX.shake(350, 8);
+    FX.slam("Festina!", { sub: "SEAL NOW · −1 HP A SECOND", color: "#FFE14A", size: 130, hold: 1100 });
+  };
+  function stopHurry() { hurrying = false; $("hurry").hidden = true; $("seal").classList.remove("urgent"); }
+  const sealed = s => {
+    sealedBy[s] = true;
+    tag(s, "sealed");
+    if (s === me) {
+      stopHurry();
+      if (!sealedBy[other(me)]) tag(other(me), "bleeding −1/s");
+    } else startHurry();
   };
 
   socket.on("round:start", r => {
@@ -180,14 +224,13 @@
     menace({ x: 30, y: 230, w: 320, h: 160, color: "#B6FF4A", every: 1300 });
     arena.set({ mode: "battle", stations: true, typing: "both", tv: tv, tvMode: "offering", loser: null, votes: null, mood: null, hype: 0 });
     hpBefore = Object.fromEntries(players.map(p => [p.id, p.hp]));
-    skew = r.serverNow - Date.now(); endsAt = r.endsAt; briefEnds = r.briefEndsAt || 0;
+    skew = r.serverNow - Date.now(); endsAt = r.endsAt; briefEnds = r.briefEndsAt || 0; wildAt = r.wildcardAt || 0;
     lastSec = -1; labels = r.optionLabels || {};
     $("rtitle").textContent = r.title;
     $("rlabel").textContent = "Rovnd " + ROMAN[r.round] + " of V";
     $("wild").hidden = !r.wildcard;
     $("wild").textContent = r.wildcard ? r.wildcard.title + ": " + r.wildcard.rule : "";
     $("brief").textContent = r.brief;
-    $("deliberate").hidden = true;
 
     // the offering: a picture painted on the CRT, or the task as text on it
     const o = r.offering;
@@ -204,7 +247,7 @@
     maxChars = r.maxChars || 0;
     ta.hidden = pick; $("count").hidden = pick; $("cards").hidden = !pick;
     ta.maxLength = maxChars || 9999; ta.value = (r.you && r.you.text) || "";
-    const sealed = (r.sealed && r.sealed[me]) || (r.you && r.you.pick);
+    const done = (r.sealed && r.sealed[me]) || (r.you && r.you.pick);
     ta.disabled = $("seal").disabled = true;               // opened by unlock() when the card goes
     $("seal").hidden = pick;
     $("cards").replaceChildren(...(pick ? r.options.map(m => {
@@ -213,6 +256,7 @@
       b.disabled = true;
       b.onclick = () => {
         socket.emit("round:choose", { model: m });
+        sealedBy[me] = true; stopHurry();
         b.setAttribute("aria-pressed", "true");
         $("cards").querySelectorAll("button").forEach(x => { x.disabled = true; });
         FX.slam("Electvm", { sub: "CHOSEN", color: "#FF5A40", size: 130, hold: 700 });
@@ -220,13 +264,16 @@
       return b;
     }) : []));
     unlock = () => {
-      if (sealed) return;
+      if (done) return;
       ta.disabled = $("seal").disabled = false;
       $("cards").querySelectorAll("button").forEach(x => { x.disabled = false; });
       if (!pick) ta.focus();
     };
     count();
-    SLOTS.forEach(s => tag(s, r.sealed && r.sealed[s] ? "sealed" : pick ? "choosing…" : "writing…"));
+    sealedBy = { p1: false, p2: false };
+    lastHp = (players.find(x => x.id === me) || {}).hp || 100;
+    SLOTS.forEach(s => tag(s, pick ? "choosing…" : "writing…"));
+    SLOTS.forEach(s => { if (r.sealed && r.sealed[s]) sealed(s); });   // a rejoin mid-round
     taskCard(r);
 
     stopTimer(); paintTimer(); tick = setInterval(paintTimer, 250);
@@ -245,18 +292,35 @@
   };
   $("seal").onclick = () => {
     socket.emit("round:seal", { text: $("testimony").value });
+    sealedBy[me] = true; stopHurry();
     $("testimony").disabled = $("seal").disabled = true;
     FX.invert(1); FX.lines(1000, { color: "rgba(255,70,40,0.8)" }); FX.shake(400, 10);
     FX.slam("Signatvm", { sub: "SEALED", color: "#FF5A40", size: 140, hold: 1000 });
   };
-  socket.on("round:sealed", s => tag(s.playerId, "sealed"));
+  socket.on("round:sealed", s => sealed(s.playerId));
+
+  // awaiting judgement: the judges can take 20 s, so a big modal with nodding faces and a count
+  const THINKING = ["Weighing the testimonies", "Consulting the auguries", "Counting the thumbs",
+    "The Senate murmurs", "An Emperor calls for more wine", "Reading between the lines"];
   socket.on("round:judging", () => {
     hush(); show("battle");   // a player who rejoins mid-judging arrives here straight from the lobby
     stopTimer(); $("timer").textContent = "--:--";
     $("testimony").disabled = $("seal").disabled = true;
-    $("deliberate").hidden = false;
     SLOTS.forEach(s => tag(s, "awaiting judgement"));
     arena.set({ typing: null });
+    $("judging-faces").replaceChildren(...faces.map((src, i) => {
+      const f = document.createElement("img"); f.className = "think"; f.src = src; f.alt = "";
+      f.style.animationDelay = (i * 0.25) + "s";
+      return f;
+    }));
+    const t0 = Date.now(), line = $("judging-line").firstChild;
+    const paint = () => {
+      const secs = Math.floor((Date.now() - t0) / 1000);
+      $("judging-secs").textContent = secs + "s";
+      line.textContent = THINKING[Math.floor(secs / 4) % THINKING.length];
+    };
+    paint(); judgingTick = setInterval(paint, 250);
+    $("judging").hidden = false;
     FX.lines(1200, { color: "rgba(240,217,160,0.7)" });
   });
 
@@ -471,6 +535,7 @@
       const out = [];
       SLOTS.forEach(s => {
         if (h.dmg[s]) out.push(nameOf(s) + " −" + h.dmg[s] + (h.crit && h.loser === s ? " (critical)" : ""));
+        if (h.bled && h.bled[s]) out.push(nameOf(s) + " −" + h.bled[s] + " (slow to seal)");
         if (h.heal[s]) out.push(nameOf(s) + " +" + h.heal[s] + (h.sweep && h.sweep[s] ? " (checklist complete)" : ""));
         if (h.flagged[s]) out.push(nameOf(s) + ": bribe caught");
       });

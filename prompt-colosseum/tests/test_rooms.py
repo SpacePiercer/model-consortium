@@ -592,6 +592,39 @@ def test_the_task_card_comes_before_the_clock():
     assert judge.calls                                              # the clock ran out: judged
 
 
+def test_a_wildcard_gets_its_own_beat_before_the_clock():
+    room, clock, out = start(rng=Wildcard("brevitas"))
+    assert out.last("round:start")["wildcardAt"] is None            # round 1 never draws one
+    to_round(room, clock, 2)
+    p = out.last("round:start")
+    assert p["wildcardAt"] - p["serverNow"] == rooms.BRIEF_S * 1000
+    assert p["briefEndsAt"] - p["wildcardAt"] == rooms.WILD_S * 1000
+    assert p["endsAt"] - p["briefEndsAt"] == 60_000                 # the announcement eats no writing time
+
+
+def test_the_slower_player_bleeds_until_they_seal():
+    room, clock, out = start()
+    clock.advance(rooms.BRIEF_S)
+    room.seal("p1", "alpha")
+    clock.advance(3)
+    assert room.players["p2"].hp == 100 - 3 * rooms.HURRY_HP and room.players["p1"].hp == 100
+    room.seal("p2", "beta")
+    v = out.last("round:verdict")
+    assert v["bled"] == {"p1": 0, "p2": 3}
+    assert v["hp"]["p2"] == 100 - 3 - v["dmg"]["p2"]                # the round's damage comes on top
+
+
+def test_bleeding_is_capped_and_waits_for_the_task_card():
+    room, clock, out = start()
+    room.seal("p1", "alpha")                                        # sealed while the card is still up
+    clock.advance(rooms.BRIEF_S)
+    assert room.players["p2"].hp == 100
+    clock.advance(59)
+    assert room.players["p2"].bled == rooms.HURRY_MAX
+    clock.advance(1)                                                # the hourglass empties
+    assert out.last("round:verdict")["bled"]["p2"] == rooms.HURRY_MAX
+
+
 def test_a_tied_emperor_flips_a_coin_and_every_face_has_a_side():
     def emp(i, vote):
         return {"id": i, "name": i, "model": "stub", "p1": 7, "p2": 7, "vote": vote, "remark": "hm"}

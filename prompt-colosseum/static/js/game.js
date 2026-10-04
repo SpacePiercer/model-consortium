@@ -50,7 +50,7 @@
   const nameOf = s => { const p = players.find(x => x.id === s); return p ? p.name : (s === "p1" ? "the First" : "the Second"); };
 
   const socket = io();
-  const SOLO = location.pathname === "/solo";   // two tabs on /solo pair up and start by themselves
+  const SOLO = location.pathname === "/solo";   // /solo: a match against the bot starts by itself
   socket.on("connect", () => {
     const s = saved();
     if (s) socket.emit("room:rejoin", { code: s.code, playerId: s.token });
@@ -60,7 +60,7 @@
     toast(e.message);
     if (/gone|Could not rejoin|abandoned/.test(e.message)) {
       forget(); me = null; $("entry").hidden = false; $("waiting").hidden = true; show("lobby");
-      if (SOLO && !/abandoned/.test(e.message)) socket.emit("room:solo", {});   // a stale session: pair up afresh
+      if (SOLO && !/abandoned/.test(e.message)) socket.emit("room:solo", {});   // a stale session: start afresh
     }
   });
 

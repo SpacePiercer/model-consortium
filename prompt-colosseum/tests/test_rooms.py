@@ -619,18 +619,24 @@ def test_match_end_carries_the_report():
     assert "dmg" in first and "heal" in first
 
 
-def test_solo_link_pairs_two_tabs_then_opens_a_fresh_room():
+
+def test_solo_plays_a_whole_match_against_the_bot():
     clock = ManualClock()
-    reg = rooms.Registry(emit_factory=lambda code: Recorder(), clock=clock, judge=Judge())
-    room, first, paired = reg.solo("tab-1")
-    assert room.code == rooms.SOLO and first.slot == "p1" and not paired
-    again, second, paired = reg.solo("tab-2")
-    assert again is room and second.slot == "p2" and paired
-    try:
-        reg.solo("tab-3")                       # a third tab while that match is on
-        assert False, "a running solo match must not be replaced"
-    except rooms.GameError:
-        pass
-    room.yield_("p1")                           # the match ends...
-    fresh, p, paired = reg.solo("tab-3")        # ...and the link opens a new one
-    assert fresh is not room and fresh.code == rooms.SOLO and p.slot == "p1" and not paired
+    out = Recorder()
+    reg = rooms.Registry(emit_factory=lambda code: out, clock=clock, judge=Judge())
+    room, me = reg.solo("tab-1")
+    assert me.slot == "p1" and room.players["p2"].bot and len(room.players) == 2
+    room.start("p1")
+    clock.advance(rooms.COUNTDOWN_S)
+    while room.phase != "finished":
+        if room.phase == "writing":
+            if room.rnd["kind"] == "choice":
+                room.choose("p1", room.options[0])
+            else:
+                room.seal("p1", "my prompt")
+            clock.advance(rooms.BRIEF_S + 60)       # the bot seals or picks by itself in that time
+        elif room.phase == "verdict":
+            room.next("p1")                         # the bot is always ready: one Next is enough
+    verdicts = out.of("round:verdict")
+    assert len(verdicts) == 5 and all(v["prompts"]["p2"] for v in verdicts)
+    assert out.of("match:end")

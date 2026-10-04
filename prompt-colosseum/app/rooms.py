@@ -32,7 +32,7 @@ CRIT = 1.25          # a unanimous verdict
 NAME_MAX = 16
 TOTAL = len(rounds.ROUNDS)
 SLOTS = ("p1", "p2")
-SOLO = "SOLO"        # the fixed room behind the /solo link (play against yourself in two tabs)
+BOT_NAME = "Machina"  # the /solo opponent
 
 
 def other(slot):
@@ -80,6 +80,15 @@ def choice_damage(correct):
     return dmg
 
 
+def bot_prompt(rnd, offering):
+    """A plain prompt that does the job badly enough to lose to a good one."""
+    subject = offering.get("task") or offering["id"].replace("-", " ")
+    return {"pictura": f"A picture of {subject}.",
+            "ludus": f"Make the game {subject}. Make it fun.",
+            "minister": f"You are this: {subject} Be helpful and do a good job.",
+            "ars": f"Skill: {subject} Use it when needed."}.get(rnd["id"], f"Do this well: {subject}")
+
+
 def clean_name(name):
     name = "".join(c for c in str(name or "") if c.isprintable())
     return re.sub(r"\s+", " ", name).strip()[:NAME_MAX] or "Gladiator"
@@ -98,6 +107,7 @@ class Player:
     no_sweep: bool = False  # /clear forfeits the next checklist-sweep heal
     connected: bool = True
     gone: bool = False    # the reconnect grace ran out
+    bot: bool = False     # the /solo opponent: plays by itself, never leaves
     gen: int = 0          # bumped on disconnect and rejoin so a stale grace timer does nothing
     # per round
     draft: str = ""
@@ -199,6 +209,20 @@ class Room:
         self.players[slot] = Player(slot, clean_name(name), secrets.token_urlsafe(8), sid)
         return self.players[slot]
 
+    def add_bot(self):
+        p = self.add_player(BOT_NAME, None)
+        p.bot = True
+        return p
+
+    def _bot_turn(self):
+        """The bot seals a plain, beatable prompt (or picks a random card) partway through the round."""
+        bot = next((p for p in self.players.values() if p.bot), None)
+        if bot is None or self.phase != "writing" or bot.at is not None:
+            return
+        if self.rnd["kind"] == "choice":
+            return self.choose(bot.slot, self.rng.choice(self.options))
+        self.seal(bot.slot, bot_prompt(self.rnd, self.offering))
+
     @locked
     def hello(self, slot):
         """Tell a new arrival who they are (and their private token), then everyone the room."""
@@ -288,7 +312,7 @@ class Room:
         self.on_close(self.code)
 
     def _close_if_empty(self):
-        if not any(p.connected for p in self.players.values()):
+        if not any(p.connected and not p.bot for p in self.players.values()):
             self.on_close(self.code)
 
     # ---- a round ----
@@ -318,6 +342,8 @@ class Room:
         self.emit("round:start", self._start_payload())
         self._state()
         self._later(BRIEF_S + seconds, self._close_writing)
+        if any(p.bot for p in self.players.values()):
+            self._later(BRIEF_S + seconds * self.rng.uniform(0.25, 0.6), self._bot_turn)
 
     @locked
     def draft(self, slot, text):
@@ -454,6 +480,8 @@ class Room:
             "emperors": [],
         }
         payload.update(extra)
+        for p in self.players.values():
+            p.ready = p.ready or p.bot          # the bot never holds up Next
         self._goto("verdict")
         self.verdict = payload
         task = self.offering.get("task") or self.offering["id"]
@@ -531,19 +559,11 @@ class Registry:
             self.rooms[code] = room
         return room, room.add_player(name, sid)
 
-    def solo(self, sid):
-        """The /solo link: the first tab opens room SOLO, the second joins it.
-        Returns (room, player, paired); paired = the second tab arrived, so the match can start.
-        A finished SOLO room is replaced; a running one is left alone."""
-        with self.lock:
-            room = self.rooms.get(SOLO)
-            if room and room.phase == "lobby" and len(room.players) == 1:
-                return room, room.add_player("Gladiator II", sid), True
-            if room and room.phase != "finished":
-                raise GameError("A solo match is already on. Finish it, or use the normal lobby.")
-            room = Room(SOLO, self.emit_factory(SOLO), self.clock, self.judge, on_close=self.remove)
-            self.rooms[SOLO] = room
-            return room, room.add_player("Gladiator I", sid), False
+    def solo(self, sid, name=None):
+        """The /solo link: a private room against the bot. Returns (room, you)."""
+        room, p = self.create(name or "Gladiator", sid)
+        room.add_bot()
+        return room, p
 
     def get(self, code):
         return self.rooms.get(code)

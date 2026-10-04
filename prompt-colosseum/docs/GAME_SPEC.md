@@ -89,6 +89,7 @@ Client → server
 |---|---|
 | `room:create` | `{ name }` |
 | `room:join` | `{ code, name }` |
+| `room:solo` | `{ name? }` (the `/solo` page: a private room against the bot "Machina", started at once; the bot seals a plain prompt partway through each round, picks a random card in round 5 and is always ready for Next) |
 | `room:start` | `{}` (host, once both players are in; starts the countdown) |
 | `room:rejoin` | `{ code, playerId }` (after a refresh or a dropped connection; accepted until the next round starts) |
 | `round:draft` | `{ text }` (optional, throttled; lets the server auto-submit on time-out) |

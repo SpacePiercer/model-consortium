@@ -34,6 +34,12 @@ verdict), so it is an optional development seat and never seated in the live dem
 Notes:
 - Gemini's free tier may use your inputs to improve Google's models and excludes commercial use.
 - OpenRouter free models rotate; pass 2–3 fallback models in the request's `models` array.
+  Tried 2026-10-04: `dots-studio/dots-3-note-preview:free` works (14 of 14 calibrate cases), the
+  Gemma `:free` models were rate-limited upstream, and `openrouter/free` can route to a safety
+  classifier, so name models explicitly. Thinking is switched off in the request
+  (`reasoning: {enabled: false}`): left on, dots spends ~3,700 tokens and 40+ s per verdict. Its host
+  (AtlasCloud) answers HTTP 400 to testimony containing "Ignore previous instructions", so that
+  Emperor abstains in such a round; the other seats and the bribe cap still apply.
 - Budget: each round costs one call per seated Emperor. A 5-round match is at most 16 calls with 4 Emperors (round 5 has no judges).
 
 ## Request

@@ -141,8 +141,10 @@ def _live_judges():
         if name == "openrouter":  # comma-separated, first is primary, the rest are fallbacks
             models = [m.strip() for m in model.split(",") if m.strip()]
             model = models[0]
+            # a thinking model otherwise burns ~3000 tokens and 40 s on one verdict
+            extra = {"reasoning": {"enabled": False}}
             if len(models) > 1:
-                extra = {"models": models}
+                extra["models"] = models
         out.append(Judge(name, model, url, key, float(os.getenv("JUDGE_TIMEOUT_S", "15")), extra, tokens))
     if os.getenv("OLLAMA_MODEL"):
         out.append(Judge("ollama", os.getenv("OLLAMA_MODEL"), "http://localhost:11434/v1", "ollama",

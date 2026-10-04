@@ -617,3 +617,20 @@ def test_match_end_carries_the_report():
     assert first["title"] == rounds.ROUNDS[0]["title"] and first["prompts"] == {"p1": "alpha", "p2": "beta"}
     assert first["emperors"] and {"p1", "p2", "remark"} <= set(first["emperors"][0])
     assert "dmg" in first and "heal" in first
+
+
+def test_solo_link_pairs_two_tabs_then_opens_a_fresh_room():
+    clock = ManualClock()
+    reg = rooms.Registry(emit_factory=lambda code: Recorder(), clock=clock, judge=Judge())
+    room, first, paired = reg.solo("tab-1")
+    assert room.code == rooms.SOLO and first.slot == "p1" and not paired
+    again, second, paired = reg.solo("tab-2")
+    assert again is room and second.slot == "p2" and paired
+    try:
+        reg.solo("tab-3")                       # a third tab while that match is on
+        assert False, "a running solo match must not be replaced"
+    except rooms.GameError:
+        pass
+    room.yield_("p1")                           # the match ends...
+    fresh, p, paired = reg.solo("tab-3")        # ...and the link opens a new one
+    assert fresh is not room and fresh.code == rooms.SOLO and p.slot == "p1" and not paired

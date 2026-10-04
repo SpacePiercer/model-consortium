@@ -32,6 +32,7 @@ CRIT = 1.25          # a unanimous verdict
 NAME_MAX = 16
 TOTAL = len(rounds.ROUNDS)
 SLOTS = ("p1", "p2")
+SOLO = "SOLO"        # the fixed room behind the /solo link (play against yourself in two tabs)
 
 
 def other(slot):
@@ -529,6 +530,20 @@ class Registry:
             room = Room(code, self.emit_factory(code), self.clock, self.judge, on_close=self.remove)
             self.rooms[code] = room
         return room, room.add_player(name, sid)
+
+    def solo(self, sid):
+        """The /solo link: the first tab opens room SOLO, the second joins it.
+        Returns (room, player, paired); paired = the second tab arrived, so the match can start.
+        A finished SOLO room is replaced; a running one is left alone."""
+        with self.lock:
+            room = self.rooms.get(SOLO)
+            if room and room.phase == "lobby" and len(room.players) == 1:
+                return room, room.add_player("Gladiator II", sid), True
+            if room and room.phase != "finished":
+                raise GameError("A solo match is already on. Finish it, or use the normal lobby.")
+            room = Room(SOLO, self.emit_factory(SOLO), self.clock, self.judge, on_close=self.remove)
+            self.rooms[SOLO] = room
+            return room, room.add_player("Gladiator I", sid), False
 
     def get(self, code):
         return self.rooms.get(code)

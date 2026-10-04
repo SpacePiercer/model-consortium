@@ -72,7 +72,21 @@ textarea::selection { background: #5A1A12; color: #F1EAD6; }
 .coin3d { position: absolute; top: 16px; width: 64px; height: 64px; transform-style: preserve-3d; z-index: 2; }
 .coin3d canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; image-rendering: pixelated; backface-visibility: hidden; }
 .coin3d .back { transform: rotateY(180deg); }
-#card-bar { transition-property: width; transition-timing-function: linear; }
+.drain { transition-property: width; transition-timing-function: linear; }
+
+/* the wildcard announcement slams in; the judging modal's faces nod in turn while they think */
+.wild-in { animation: wild-in .5s cubic-bezier(.15,1.5,.3,1) both; }
+@keyframes wild-in { 0% { opacity: 0; transform: scale(2.2) rotate(-6deg); } 60% { opacity: 1; transform: scale(.96) rotate(1deg); } 100% { transform: rotate(-1deg); } }
+.think { width: 96px; height: 96px; image-rendering: pixelated; filter: drop-shadow(4px 5px 0 rgba(0,0,0,0.45)); animation: think 1.6s ease-in-out infinite; }
+@keyframes think { 0%, 60%, 100% { transform: translateY(0) rotate(0); } 20% { transform: translateY(-16px) rotate(-6deg); } 40% { transform: translateY(0) rotate(4deg); } }
+.dots::after { content: ''; display: inline-block; width: 2em; text-align: left; animation: dots 1.2s steps(4) infinite; }
+@keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+.hurry { animation: hurry .6s steps(2) infinite; }
+@keyframes hurry { 0% { border-color: #FF3B30; } 50% { border-color: #FFE14A; } }
+#seal.urgent { animation: urgent .45s ease-in-out infinite; }
+@keyframes urgent { 0%, 100% { transform: rotate(-10deg) scale(1); box-shadow: inset 0 0 0 6px rgba(90,14,10,0.6), 6px 8px 0 rgba(0,0,0,0.6), 0 0 0 0 rgba(255,225,74,0.8); }
+  50% { transform: rotate(-10deg) scale(1.12); box-shadow: inset 0 0 0 6px rgba(90,14,10,0.6), 6px 8px 0 rgba(0,0,0,0.6), 0 0 0 14px rgba(255,225,74,0); } }
+@media (prefers-reduced-motion: reduce) { .think, .hurry, #seal.urgent, .wild-in { animation: none !important; } }
 .report-round { padding: 12px 0 16px; border-bottom: 2px dashed rgba(90,26,18,0.35); }
 .report-round h3 { margin: 0 0 4px; font-weight: 700; font-size: 28px; color: #5A1A12; }
 .report-round .task { font-family: 'Special Elite', monospace; font-size: 17px; color: #3a2a1a; margin-bottom: 8px; }

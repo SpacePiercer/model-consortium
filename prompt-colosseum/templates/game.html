@@ -117,7 +117,11 @@
 <div aria-hidden="true" style="position: absolute; left: 44px; top: 758px; width: 916px; height: 24px; border-radius: 12px; background: linear-gradient(180deg, #4a4646 0%, #121010 55%, #2a2626 100%); box-shadow: 0 4px 0 rgba(0,0,0,0.6)"></div>
 <button id="seal" type="button" style="position: absolute; left: 884px; top: 668px; width: 104px; height: 104px; border-radius: 50%; border: none; cursor: pointer; transform: rotate(-10deg); display: flex; align-items: center; justify-content: center; font-family: 'Grenze Gotisch', serif; font-weight: 700; font-size: 34px; color: #F6D9C8; background: radial-gradient(circle at 35% 30%, #D8483C 0%, #9A1C14 55%, #5A0E0A 100%); box-shadow: inset 0 0 0 6px rgba(90,14,10,0.6), 6px 8px 0 rgba(0,0,0,0.6); text-shadow: 0 2px 0 #3a0806">Seal</button>
 
-<div id="deliberate" hidden style="position: absolute; left: 60px; top: 380px; width: 880px; text-align: center; font-family: 'Jacquard 24', serif; font-size: 52px; color: #F0D9A0; text-shadow: 0 4px 0 #000">The Emperors deliberate…</div>
+<!-- the other gladiator has sealed: this one bleeds a point a second until they seal too -->
+<div id="hurry" hidden role="alert" class="hurry" style="position: absolute; left: 60px; top: 372px; width: 880px; box-sizing: border-box; padding: 6px 18px; display: flex; align-items: center; justify-content: center; gap: 16px; background: rgba(90,14,10,0.92); border: 3px solid #FF3B30; box-shadow: 0 0 22px rgba(255,40,30,0.6), 6px 8px 0 rgba(0,0,0,0.6)">
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 900; font-size: 30px; color: #FFE14A; text-shadow: 0 2px 0 #000">Festina!</span>
+<span id="hurry-text" style="font-size: 24px; color: #FFD8D0; text-shadow: 0 2px 0 #000">Your rival has sealed. −1 HP every second until you seal.</span>
+</div>
 
 <!-- the task card: the round's job, big, for BRIEF_S seconds before the clock starts -->
 <div id="card" hidden style="position: absolute; left: 0; top: 0; width: 1440px; height: 810px; z-index: 30; display: flex; align-items: center; justify-content: center; background: rgba(6,3,4,0.72)">
@@ -127,8 +131,29 @@
 <span id="card-brief" style="font-size: 30px; line-height: 1.15; color: #6A1A12"></span>
 <img id="card-img" alt="" hidden style="max-width: 420px; max-height: 260px; box-shadow: 0 0 0 4px #1d1a16">
 <span id="card-task" style="font-family: 'Special Elite', monospace; font-size: 40px; line-height: 1.25; color: #1d1a16"></span>
-<span id="card-wild" hidden style="padding: 4px 14px; background: #5A0E0A; font-size: 26px; color: #FFC2B8"></span>
-<div aria-hidden="true" style="position: absolute; left: 0; bottom: 0; width: 100%; height: 12px; background: rgba(90,26,18,0.15)"><div id="card-bar" style="height: 100%; width: 100%; background: #9A1C14"></div></div>
+<div aria-hidden="true" style="position: absolute; left: 0; bottom: 0; width: 100%; height: 12px; background: rgba(90,26,18,0.15)"><div id="card-bar" class="drain" style="height: 100%; width: 100%; background: #9A1C14"></div></div>
+</div>
+</div>
+
+<!-- the wildcard: announced on its own, straight after the task card, before the clock starts -->
+<div id="wildcard" hidden style="position: absolute; left: 0; top: 0; width: 1440px; height: 810px; z-index: 30; display: flex; align-items: center; justify-content: center; background: rgba(40,4,4,0.8)">
+<div class="wild-in" style="position: relative; width: 900px; box-sizing: border-box; padding: 34px 50px 50px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; background: radial-gradient(circle at 50% 30%, #9A1C14 0%, #5A0E0A 70%, #3A0806 100%); box-shadow: inset 0 0 0 6px rgba(255,200,120,0.25), inset 0 0 40px rgba(0,0,0,0.6), 14px 16px 0 rgba(0,0,0,0.6), 0 0 0 4px #1d1a16, 0 0 60px rgba(255,60,30,0.5); overflow: hidden">
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 24px; letter-spacing: 8px; color: #FFC2B8">Fortvna Intervenit</span>
+<span style="font-family: 'Jersey 10', sans-serif; font-size: 30px; letter-spacing: 6px; color: #FFE14A">WILDCARD</span>
+<span id="wild-title" style="font-family: 'Jacquard 24', serif; font-size: 120px; line-height: 0.9; color: #FFE9C8; text-shadow: 0 6px 0 #1d0402, 4px 0 0 rgba(255,40,140,0.45), -4px 0 0 rgba(60,200,255,0.35)"></span>
+<span id="wild-rule" style="font-family: 'Special Elite', monospace; font-size: 42px; line-height: 1.2; color: #FFFFFF; text-shadow: 0 3px 0 #1d0402"></span>
+<div aria-hidden="true" style="position: absolute; left: 0; bottom: 0; width: 100%; height: 12px; background: rgba(0,0,0,0.3)"><div id="wild-bar" class="drain" style="height: 100%; width: 100%; background: #FFE14A"></div></div>
+</div>
+</div>
+
+<!-- the Emperors are thinking: a big modal so a slow verdict never looks like a frozen page -->
+<div id="judging" hidden aria-live="polite" style="position: absolute; left: 0; top: 0; width: 1440px; height: 810px; z-index: 30; display: flex; align-items: center; justify-content: center; background: rgba(6,3,4,0.72)">
+<div style="position: relative; width: 900px; box-sizing: border-box; padding: 30px 50px 40px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; background: linear-gradient(180deg, #F6F0DE 0%, #E4DAC0 100%); box-shadow: inset 0 0 30px rgba(120,90,40,0.25), 14px 16px 0 rgba(0,0,0,0.6), 0 0 0 4px #1d1a16">
+<span style="font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 22px; letter-spacing: 6px; color: #8A5A30">Awaiting Jvdgement</span>
+<span style="font-family: 'Jacquard 24', serif; font-size: 84px; line-height: 0.9; color: #5A1A12">The Emperors Deliberate</span>
+<div id="judging-faces" aria-hidden="true" style="display: flex; gap: 26px; height: 110px; align-items: flex-end"></div>
+<span id="judging-line" style="font-family: 'Special Elite', monospace; font-size: 28px; color: #1d1a16">Weighing the testimonies<span class="dots"></span></span>
+<span id="judging-secs" style="font-family: 'Doto', monospace; font-weight: 900; font-size: 26px; color: #8A5A30">0s</span>
 </div>
 </div>
 </div>

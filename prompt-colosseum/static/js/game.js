@@ -123,8 +123,10 @@
     img.src = url;
   };
 
-  let labels = {}, endsAt = 0, skew = 0, tick = null, lastSec = -1, draftTimer = null, keys = 0, vanish = null, maxChars = 0;
-  const left = () => Math.max(0, Math.ceil((endsAt - (Date.now() + skew)) / 1000));
+  let labels = {}, endsAt = 0, briefEnds = 0, skew = 0, tick = null, lastSec = -1, draftTimer = null, keys = 0, vanish = null, maxChars = 0;
+  const serverNow = () => Date.now() + skew;
+  // during the task card the clock shows the full writing time; it starts when the card goes
+  const left = () => Math.max(0, Math.ceil((endsAt - Math.max(serverNow(), briefEnds)) / 1000));
   const paintTimer = () => {
     const t = left(), timer = $("timer");
     timer.textContent = String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0");
@@ -138,13 +140,40 @@
   const stopTimer = () => { clearInterval(tick); tick = null; $("timer").classList.remove("fx-hot"); };
   const count = () => { $("count").textContent = $("testimony").value.length + "/" + maxChars; };
 
+  // timers that belong to one screen (the task card, the falling faces); a new event cancels them
+  let beats = [];
+  const beat = (ms, fn) => beats.push(setTimeout(fn, ms));
+  const hush = () => { beats.forEach(clearTimeout); beats = []; $("card").hidden = true; };
+
+  // the task card: the round's job, big, until the clock starts; a red line drains underneath
+  let unlock = () => {};
+  const taskCard = r => {
+    const ms = briefEnds - serverNow();
+    if (ms <= 0) return unlock();
+    const o = r.offering;
+    $("card-round").textContent = "Rovnd " + ROMAN[r.round] + " of V";
+    $("card-title").textContent = r.title;
+    $("card-brief").textContent = r.brief;
+    $("card-img").hidden = !o.url; if (o.url) $("card-img").src = o.url;
+    $("card-task").hidden = !o.task; $("card-task").textContent = o.task || "";
+    $("card-wild").hidden = !r.wildcard;
+    $("card-wild").textContent = r.wildcard ? r.wildcard.title + ": " + r.wildcard.rule : "";
+    const bar = $("card-bar");
+    bar.style.transitionDuration = "0ms"; bar.style.width = "100%";
+    void bar.offsetWidth;                                   // restart the transition
+    bar.style.transitionDuration = ms + "ms"; bar.style.width = "0%";
+    $("card").hidden = false;
+    beat(ms, () => { $("card").hidden = true; unlock(); FX.lines(500); FX.shake(200, 6); });
+  };
+
   socket.on("round:start", r => {
-    show("battle"); calm(); unTbc();
+    hush(); show("battle"); calm(); unTbc();
     menace({ x: 1230, y: 560, w: 170, h: 170, color: "#FF4FB0" });
     menace({ x: 30, y: 230, w: 320, h: 160, color: "#B6FF4A", every: 1300 });
     arena.set({ mode: "battle", stations: true, typing: "both", tv: tv, tvMode: "offering", loser: null, votes: null, mood: null, hype: 0 });
     hpBefore = Object.fromEntries(players.map(p => [p.id, p.hp]));
-    endsAt = r.endsAt; skew = r.serverNow - Date.now(); lastSec = -1; labels = r.optionLabels || {};
+    skew = r.serverNow - Date.now(); endsAt = r.endsAt; briefEnds = r.briefEndsAt || 0;
+    lastSec = -1; labels = r.optionLabels || {};
     $("rtitle").textContent = r.title;
     $("rlabel").textContent = "Rovnd " + ROMAN[r.round] + " of V";
     $("wild").hidden = !r.wildcard;
@@ -159,7 +188,8 @@
     $("tv-cap").textContent = "offering · " + o.id;
     tv.setAttribute("aria-label", o.url ? "The offering: a picture" : "The offering: " + o.task);
     if (o.url) paintImage(o.url);
-    if (r.wildcard && r.wildcard.id === "caecus") vanish = setTimeout(() => { $("tv-text").hidden = true; arena.set({ tvMode: "static" }); }, 10000);
+    if (r.wildcard && r.wildcard.id === "caecus")   // 10 s after the clock starts, not after the card
+      vanish = setTimeout(() => { $("tv-text").hidden = true; arena.set({ tvMode: "static" }); }, Math.max(0, briefEnds - serverNow()) + 10000);
 
     // write a testimony, or pick a model card in Consilivm
     const pick = r.options != null, ta = $("testimony");
@@ -167,12 +197,12 @@
     ta.hidden = pick; $("count").hidden = pick; $("cards").hidden = !pick;
     ta.maxLength = maxChars || 9999; ta.value = (r.you && r.you.text) || "";
     const sealed = (r.sealed && r.sealed[me]) || (r.you && r.you.pick);
-    ta.disabled = $("seal").disabled = !!sealed;
+    ta.disabled = $("seal").disabled = true;               // opened by unlock() when the card goes
     $("seal").hidden = pick;
     $("cards").replaceChildren(...(pick ? r.options.map(m => {
       const b = el("button", r.optionLabels[m]); b.type = "button"; b.className = "card-model";
       b.setAttribute("aria-pressed", String(!!(r.you && r.you.pick === m)));
-      b.disabled = !!(r.you && r.you.pick);
+      b.disabled = true;
       b.onclick = () => {
         socket.emit("round:choose", { model: m });
         b.setAttribute("aria-pressed", "true");
@@ -181,9 +211,15 @@
       };
       return b;
     }) : []));
+    unlock = () => {
+      if (sealed) return;
+      ta.disabled = $("seal").disabled = false;
+      $("cards").querySelectorAll("button").forEach(x => { x.disabled = false; });
+      if (!pick) ta.focus();
+    };
     count();
     SLOTS.forEach(s => tag(s, r.sealed && r.sealed[s] ? "sealed" : pick ? "choosing…" : "writing…"));
-    if (!pick && !sealed) ta.focus();
+    taskCard(r);
 
     stopTimer(); paintTimer(); tick = setInterval(paintTimer, 250);
     hud(false);
@@ -207,7 +243,7 @@
   };
   socket.on("round:sealed", s => tag(s.playerId, "sealed"));
   socket.on("round:judging", () => {
-    show("battle");   // a player who rejoins mid-judging arrives here straight from the lobby
+    hush(); show("battle");   // a player who rejoins mid-judging arrives here straight from the lobby
     stopTimer(); $("timer").textContent = "--:--";
     $("testimony").disabled = $("seal").disabled = true;
     $("deliberate").hidden = false;
@@ -216,70 +252,104 @@
     FX.lines(1200, { color: "rgba(240,217,160,0.7)" });
   });
 
-  // ---- verdict ----
+  // ---- each Emperor's face, cut out of the group portrait (design/emperors.js) ----
+  const faces = [];
+  (() => {
+    const E = window.EMPERORS, img = new Image();
+    img.onload = () => {
+      // ponytail: per-face top edges hand-fitted to the current art (texels); redo if emperors.js is regenerated
+      const k = img.naturalWidth / E.w, S = 52, TOP = [30, 46, 26, 14];
+      E.faces.forEach((fx, i) => {
+        const c = document.createElement("canvas"); c.width = c.height = S;
+        const x0 = Math.max(0, Math.min(E.w - S, fx - S / 2));
+        c.getContext("2d").drawImage(img, x0 * k, (TOP[i] || 0) * k, S * k, S * k, 0, 0, S, S);
+        faces[i] = c.toDataURL();
+      });
+    };
+    img.src = E.src;
+  })();
+
+  // ---- verdict: the table of faces, then the wound ----
   const wound = (d, crit) => crit ? "a critical blow" : d >= 40 ? "a mortal wound" : d >= 25 ? "a grievous wound"
     : d >= 12 ? "a deep cut" : d > 0 ? "a scratch" : "unscathed";
-  const STAMPS = { win: ["Victor", "rgba(30,110,40,0.8)"], lose: ["Victvs", "rgba(190,20,20,0.78)"], draw: ["Par", "rgba(150,110,20,0.8)"] };
+  const GAP = 800;   // ms between falling faces
 
   socket.on("round:verdict", v => {
-    stopTimer(); clearTimeout(vanish);
+    stopTimer(); clearTimeout(vanish); hush();
     show("verdict"); calm(); unTbc();
-    $("endbox").hidden = true; $("vbuttons").hidden = false;
+    $("report").hidden = true; $("endbox").hidden = true; $("vbuttons").hidden = false;
     SLOTS.forEach(s => tag(s, null));
     const winner = v.loser ? other(v.loser) : null;
-    const votes = v.emperors.length ? v.emperors.map(e => e.vote) : null;
     const mood = !winner ? "neutral" : winner === me ? "happy" : "mad";   // the Emperors face the local player
-    arena.set({ mode: "verdict", stations: true, loser: v.loser, votes: votes, mood: mood, hype: 1, tv: null, typing: null });
-
+    arena.set({ mode: "verdict", stations: true, loser: v.loser, votes: null, mood: mood, hype: 1, tv: null, typing: null });
     $("vtitle").textContent = v.forfeit ? "A Gladiator Has Fled" : "The Emperors Have Spoken";
-    $("vline").replaceChildren();
-    if (v.forfeit) $("vline").append(el("span", nameOf(v.forfeit).toUpperCase() + " forfeits Rovnd " + ROMAN[v.round]));
-    else if (winner) {
-      const n = el("span", nameOf(winner).toUpperCase(), "font-family: 'Jersey 10', sans-serif; font-size: 28px; color: " + (winner === "p1" ? "#D8FF9A" : "#FF8FCB"));
-      $("vline").append(n, " takes Rovnd " + ROMAN[v.round] + " · " + v.totals[winner] + " to " + v.totals[other(winner)]);
-    } else $("vline").append("Rovnd " + ROMAN[v.round] + " is a draw · " + v.totals.p1 + " to " + v.totals.p2);
+    $("col-p1").textContent = nameOf("p1").toUpperCase();
+    $("col-p2").textContent = nameOf("p2").toUpperCase();
 
-    // the wound, under the loser (or both, on a tie)
-    const box = $("dmgbox");
-    box.style.left = v.loser === "p2" ? "1150px" : "44px";
-    box.style.alignItems = v.loser === "p2" ? "flex-end" : "flex-start";
+    // one row per Emperor; the face falls into the picked column, a coin first on a tie
+    const rows = $("vrows");
+    rows.replaceChildren();
+    let at = 500;
+    v.emperors.forEach((e, i) => {
+      const row = el("div"); row.className = "vrow";
+      const who = el("span", e.name); who.className = "who" + (e.pick ? "" : " out");
+      if (!e.pick) who.append(el("small", "abstinet"));
+      const cells = { p1: el("div"), p2: el("div") };
+      cells.p1.className = cells.p2.className = "cell";
+      row.append(who, cells.p1, cells.p2);
+      rows.append(row);
+      if (!e.pick) return;
+      if (e.coin) {
+        beat(at, () => {
+          const coin = el("div", "?"); coin.className = "coin"; row.style.position = "relative";
+          coin.style.left = (170 + (row.offsetWidth - 170) / 2) + "px";
+          row.append(coin);
+          beat(900, () => coin.remove());
+        });
+        at += 900;
+      }
+      beat(at, () => {
+        const f = document.createElement("img");
+        f.className = "face fall"; f.alt = e.name + " picks " + nameOf(e.pick);
+        f.src = faces[i] || faces[0] || "";
+        cells[e.pick].append(f);
+        beat(300, () => FX.shake(220, 10));
+      });
+      at += GAP;
+    });
+    if (!v.emperors.length) {
+      const row = el("div", v.picks ? "Consilivm needs no Emperor: the right card was " + (v.answer || []).map(k => labels[k] || k).join(", ") + "."
+        : v.forfeit ? "No Emperor was needed." : "The Emperors were silent.",
+        "padding: 22px 6px; font-family: 'Special Elite', monospace; font-size: 22px; color: #1d1a16; text-align: center");
+      rows.append(row);
+    }
+
+    // then the outcome: one line, the wound beside the loser, and the shout
     const both = !v.loser && v.dmg.p1 > 0;
+    $("vline").style.opacity = 0; $("dmgbox").style.opacity = 0;
+    $("vline").replaceChildren();
+    if (v.forfeit) $("vline").append(nameOf(v.forfeit).toUpperCase() + " forfeits Rovnd " + ROMAN[v.round]);
+    else if (winner) $("vline").append(el("span", nameOf(winner).toUpperCase(), "font-family: 'Jersey 10', sans-serif; font-size: 44px; color: " + (winner === "p1" ? "#D8FF9A" : "#FF8FCB")),
+      " takes Rovnd " + ROMAN[v.round] + " · " + nameOf(v.loser).toUpperCase() + " −" + v.damage);
+    else $("vline").append("Rovnd " + ROMAN[v.round] + " is a draw" + (both ? " · both −" + v.damage : ""));
+    const box = $("dmgbox");
+    box.style.left = v.loser === "p2" ? "1100px" : "60px";
+    box.style.alignItems = v.loser === "p2" ? "flex-end" : "flex-start";
     $("dmg").textContent = v.damage > 0 ? "−" + v.damage + (both ? " each" : "") : "0";
     $("dmglabel").textContent = wound(v.damage, v.crit);
-    $("tags").style.left = v.loser === "p2" ? "1036px" : "44px";
-    $("tags").style.textAlign = v.loser === "p2" ? "right" : "left";
-    const tags = [];
-    SLOTS.forEach(s => {
-      const who = s === me ? "You" : nameOf(s);
-      if (v.flagged[s]) tags.push(who + ": the Emperors saw through the bribe");
-      if (v.heal[s]) tags.push(who + " heals " + v.heal[s] + (v.sweep[s] ? " (checklist complete)" : ""));
-    });
-    if (v.answer) tags.push("Right answer: " + v.answer.map(k => labels[k] || k).join(", "));
-    $("tags").replaceChildren(...tags.map(t => el("span", t)));
 
-    // the two testimonies
-    SLOTS.forEach(s => {
-      const paper = $("paper-" + s), result = !winner ? "draw" : s === winner ? "win" : "lose";
-      paper.querySelector(".total").textContent = v.totals[s];
-      paper.querySelector(".text").textContent = v.prompts[s] || (v.picks ? "(no pick)" : "(nothing was written)");
-      const [word, color] = STAMPS[result], stamp = paper.querySelector(".stamp");
-      stamp.textContent = word; stamp.style.color = color; stamp.style.border = "3px solid " + color;
-      paper.style.outline = result === "win" ? "4px solid " + (s === "p1" ? "rgba(182,255,74,0.45)" : "rgba(255,79,176,0.35)") : "none";
-    });
-
-    // the Emperors' reasons
-    const acta = $("acta");
-    acta.replaceChildren();
-    if (!v.emperors.length) {
-      acta.append(el("span", v.picks ? "Consilivm is not judged by the Emperors." : "No Emperor was needed.",
-        "grid-column: 1 / -1; font-family: 'Special Elite', monospace; font-size: 15px"));
-    }
-    v.emperors.forEach(e => {
-      acta.append(el("span", e.name, "font-family: 'Cinzel Decorative', serif; font-weight: 700; font-size: 14px; color: #2A1F15"));
-      const sc = el("span", null, "font-family: 'Doto', monospace; font-weight: 900; font-size: 16px");
-      if (e.vote) sc.append(el("span", e.p1, "color: #2E6A10"), "·", el("span", e.p2, "color: #A0145E"));
-      else sc.textContent = "–";
-      acta.append(sc, el("span", e.vote ? "“" + e.remark + "”" : "(abstained)", "font-family: 'Special Elite', monospace; font-size: 15px"));
+    beat(at + 200, () => {
+      $("vline").style.opacity = 1; $("dmgbox").style.opacity = 1;
+      players = players.map(p => ({ ...p, hp: v.hp[p.id], context: v.context[p.id] }));
+      hud(true);
+      arena.set({ votes: v.emperors.length ? v.emperors.map(e => e.pick) : null });
+      FX.invert(1); FX.lines(1000); FX.shake(500, 10);
+      const sub = winner ? nameOf(winner).toUpperCase() + " TAKES THE ROUND" : "A DRAW";
+      if (SLOTS.some(s => v.flagged[s])) FX.slam("Corrvptio!", { sub: "THE EMPERORS SAW THROUGH THE BRIBE", color: "#FFB347", size: 120, hold: 1300 });
+      else if (!winner) FX.slam("Par", { sub: sub, color: "#F0D9A0", size: 130, hold: 1300 });
+      else if (winner === me) FX.slam("Io Triumphe!", { sub: sub, color: "#CFFF8A", size: 120, hold: 1300 });
+      else FX.slam("Vae Victis!", { sub: sub, color: "#FF6FC0", size: 130, hold: 1300 });
+      if (winner) menace({ x: winner === "p1" ? 40 : 1150, y: 150, w: 260, h: 220, color: winner === "p1" ? "#B6FF4A" : "#FF4FB0", every: 700 });
     });
 
     const last = v.round >= 5;
@@ -288,21 +358,6 @@
     $("next").disabled = false;
     $("next").textContent = last ? "To the Verdict" : "Next Rovnd";
     yieldArmed = false; $("yield").textContent = "Yield";
-
-    players = players.map(p => ({ ...p, hp: v.hp[p.id], context: v.context[p.id] }));
-    hud(true);
-
-    setTimeout(() => {
-      FX.invert(1); FX.lines(1000); FX.shake(500, 10);
-      const sub = winner ? nameOf(winner).toUpperCase() + " TAKES THE ROUND" : "A DRAW";
-      if (!winner) FX.slam("Par", { sub: sub, color: "#F0D9A0", size: 130, hold: 1300 });
-      else if (winner === me) FX.slam("Io Triumphe!", { sub: sub, color: "#CFFF8A", size: 120, hold: 1300 });
-      else FX.slam("Vae Victis!", { sub: sub, color: "#FF6FC0", size: 130, hold: 1300 });
-    }, 200);
-    if (winner) {
-      menace({ x: winner === "p1" ? 40 : 1150, y: 150, w: 260, h: 220, color: winner === "p1" ? "#B6FF4A" : "#FF4FB0", every: 700 });
-      menace({ x: winner === "p1" ? 1100 : 40, y: 200, w: 300, h: 160, chars: "†", color: "#FF3B30", every: 1400 });
-    }
   });
 
   $("compact").onclick = () => { socket.emit("context:reset", { mode: "compact" }); $("compact").disabled = $("clear").disabled = true; };
@@ -314,19 +369,20 @@
     socket.emit("match:yield", {});
   };
 
-  // ---- the end ----
+  // ---- the end, and the report of the whole match ----
+  let history = [];
   socket.on("match:end", m => {
-    stopTimer(); forget();
+    stopTimer(); hush(); forget();
+    history = m.history || [];
     if (screen !== "verdict") {   // yield or flight mid-round: show the end over the verdict layout
       show("verdict");
-      ["paper-p1", "paper-p2"].forEach(id => { $(id).querySelector(".text").textContent = ""; $(id).querySelector(".total").textContent = ""; $(id).querySelector(".stamp").textContent = ""; });
-      $("acta").replaceChildren(); $("tags").replaceChildren(); $("dmg").textContent = ""; $("dmglabel").textContent = "";
-      $("vline").textContent = "";
+      $("vrows").replaceChildren(); $("vline").replaceChildren(); $("dmg").textContent = ""; $("dmglabel").textContent = "";
     }
     calm(); unTbc();
     m.final.forEach(f => { const p = players.find(x => x.id === f.id); if (p) p.hp = f.hp; });
     hud(false);
     $("vbuttons").hidden = true; $("endbox").hidden = false;
+    $("report-open").hidden = !history.length;
     $("vtitle").textContent = m.winnerId ? nameOf(m.winnerId).toUpperCase() + " is Victor" : "The Games End in a Draw";
     const why = { yield: "by yield", disconnect: "by flight", hp: "" }[m.reason] || "";
     $("endtext").textContent = !m.winnerId ? "Par" : m.winnerId === me ? "Victor " + why : "Victvs " + why;
@@ -337,6 +393,45 @@
       sub: m.winnerId === me ? "VICTORY" : m.winnerId ? "DEFEAT" : "DRAW",
       color: m.winnerId === me ? "#FFE14A" : "#9AA0B4", size: 120, hold: 1600 });
   });
+
+  const report = () => {
+    const body = $("report-body");
+    body.replaceChildren(...history.map(h => {
+      const r = el("div"); r.className = "report-round";
+      r.append(el("h3", "Rovnd " + ROMAN[h.round] + " · " + h.title));
+      r.append(Object.assign(el("div", h.task), { className: "task" }));
+      const pr = el("div"); pr.className = "prompts";
+      SLOTS.forEach(s => {
+        const d = el("div");
+        d.append(el("b", nameOf(s).toUpperCase() + " · " + h.totals[s], "color: " + (s === "p1" ? "#3E7A10" : "#A0145E")),
+          h.prompts[s] || (h.picks ? "(no pick)" : "(nothing was written)"));
+        pr.append(d);
+      });
+      r.append(pr);
+      if (h.emperors.length) {
+        const em = el("div"); em.className = "emps";
+        h.emperors.forEach(e => {
+          em.append(Object.assign(el("span", e.name), { className: "n" }),
+            Object.assign(el("span", e.vote ? e.p1 + " · " + e.p2 : "–"), { className: "s" }),
+            Object.assign(el("span", e.vote ? "“" + e.remark + "”" + (e.coin ? " (a coin chose " + nameOf(e.pick) + ")" : "") : "abstained"), { className: "r" }));
+        });
+        r.append(em);
+      }
+      const out = [];
+      SLOTS.forEach(s => {
+        if (h.dmg[s]) out.push(nameOf(s) + " −" + h.dmg[s] + (h.crit && h.loser === s ? " (critical)" : ""));
+        if (h.heal[s]) out.push(nameOf(s) + " +" + h.heal[s] + (h.sweep && h.sweep[s] ? " (checklist complete)" : ""));
+        if (h.flagged[s]) out.push(nameOf(s) + ": bribe caught");
+      });
+      if (h.answer) out.push("right card: " + h.answer.map(k => labels[k] || k).join(", "));
+      if (h.forfeit) out.push(nameOf(h.forfeit) + " forfeited");
+      r.append(Object.assign(el("div", out.join(" · ") || "no blood drawn"), { className: "out" }));
+      return r;
+    }));
+    $("report").hidden = false;
+  };
+  $("report-open").onclick = report;
+  $("report-close").onclick = () => { $("report").hidden = true; };
   $("again").onclick = () => { forget(); location.reload(); };
 
   show("lobby");

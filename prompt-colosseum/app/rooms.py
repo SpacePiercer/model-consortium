@@ -22,7 +22,8 @@ from dataclasses import dataclass
 from . import judges, rounds
 
 COUNTDOWN_S = 3      # lobby -> first round
-VERDICT_S = 8        # a verdict stays up this long unless both players press Next
+BRIEF_S = 5          # the task card shows this long before the writing clock starts
+VERDICT_S = 12       # a verdict stays up this long unless both players press Next (the faces fall)
 GRACE_S = 20         # time to reconnect before a gone player forfeits the round
 MAX_HP = 100
 TIE_DAMAGE = 5       # a tied round, or every judge failing: both take this
@@ -134,6 +135,8 @@ class Room:
         self.round_no = 0
         self.rnd = self.offering = self.wildcard = self.options = None
         self.ends_at = 0                        # epoch ms
+        self.brief_ends = 0                     # epoch ms: the task card goes, the clock starts
+        self.history = []                       # every verdict, for the match report
         self.used = set()                       # offering ids already played
         self.verdict = self.final = None        # kept so a rejoining player can be caught up
 
@@ -174,7 +177,7 @@ class Room:
         else:
             offering["task"] = o["task"]       # never the hidden checklist: that is for the judges
         return {"round": self.round_no, "kind": rnd["kind"], "title": rnd["title"], "brief": rnd["brief"],
-                "maxChars": rnd.get("max_chars", 0), "endsAt": self.ends_at,
+                "maxChars": rnd.get("max_chars", 0), "endsAt": self.ends_at, "briefEndsAt": self.brief_ends,
                 "serverNow": int(self.clock.now() * 1000), "offering": offering,
                 "options": self.options,
                 "optionLabels": {k: rounds.MODELS[k] for k in self.options} if self.options else None,
@@ -305,13 +308,15 @@ class Room:
         if self.wildcard and self.wildcard["id"] == "clepsydra":
             seconds //= 2
         self.options = rounds.options(offering) if rnd["kind"] == "choice" else None
-        self.ends_at = int((self.clock.now() + seconds) * 1000)
+        # ponytail: the card is client-side; the phase is already "writing" and an early seal counts
+        self.brief_ends = int((self.clock.now() + BRIEF_S) * 1000)
+        self.ends_at = self.brief_ends + seconds * 1000
         for p in self.players.values():
             p.new_round()
         self._goto("writing")
         self.emit("round:start", self._start_payload())
         self._state()
-        self._later(seconds, self._close_writing)
+        self._later(BRIEF_S + seconds, self._close_writing)
 
     @locked
     def draft(self, slot, text):
@@ -404,8 +409,15 @@ class Room:
                     else:
                         heal[s] = rounds.SWEEP_HEAL
         keys = ("id", "name", "model", "p1", "p2", "vote", "remark")
+        emperors = []
+        for e in r["emperors"]:
+            # every face lands in a column: a tied Emperor's side is a coin flip, shown as one.
+            # Display only: damage and the crit come from the totals and the real votes.
+            coin = e["vote"] == "tie"
+            pick = ("p1" if self.rng.random() < 0.5 else "p2") if coin else e["vote"]
+            emperors.append({**{k: e[k] for k in keys}, "pick": pick, "coin": coin})
         self._verdict(dmg, heal, totals=totals, crit=crit, flagged=r["flagged"], sweep=r["sweep"],
-                      emperors=[{k: e[k] for k in keys} for e in r["emperors"]],
+                      emperors=emperors,
                       **({"forfeit": forfeit[0]} if forfeit else {}))
 
     def _settle_choice(self):
@@ -443,6 +455,8 @@ class Room:
         payload.update(extra)
         self._goto("verdict")
         self.verdict = payload
+        task = self.offering.get("task") or self.offering["id"]
+        self.history.append({**payload, "title": self.rnd["title"], "task": task})
         self.emit("round:verdict", payload)
         self._state()
         self._later(VERDICT_S, self._advance)
@@ -485,7 +499,8 @@ class Room:
     def _end(self, winner, reason):
         self._goto("finished")
         self.final = {"winnerId": winner, "reason": reason,
-                      "final": [{"id": s, "hp": p.hp} for s, p in sorted(self.players.items())]}
+                      "final": [{"id": s, "hp": p.hp} for s, p in sorted(self.players.items())],
+                      "history": self.history}
         self.emit("match:end", self.final)
         self._state()
         self._close_if_empty()

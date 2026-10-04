@@ -5,16 +5,20 @@
 1. **Lobby.** A player creates a room (gets a 4-letter code) or joins one. The match is always
    the 5 rounds below, with fixed time and length limits. The Emperors seated are the judges
    registered on the server, topped up to 4 with random-score fakes (see `docs/JUDGES.md`).
-2. **Round start.** Server picks an unused offering and broadcasts it. The timer starts on the
-   server. Both players type their "testimonium", up to the round's character limit.
+2. **Round start.** Server picks an unused offering and broadcasts it. A task card shows the
+   round's job for 5 s (`BRIEF_S`, with a draining line); the writing clock starts after it, so the
+   full time is kept. Both players type their "testimonium", up to the round's character limit.
 3. **Seal.** A player presses Seal to lock their prompt. The opponent only sees that it is
    sealed and when. When both are sealed, or the hourglass empties, the round closes. An
    empty prompt at time-out counts as an empty submission (it will score 0).
 4. **Judgement.** Server sends the offering (and its hidden checklist) and both prompts to every
    seated Emperor in parallel. Round 5 has no judges: the server scores the picks.
-5. **Verdict.** Scores are summed, damage and healing applied, verdict broadcast. The verdict
-   shows the two prompts side by side and each Emperor's one-line remark. After ~8 s (or both
-   press Next, after using /compact or /clear if they want to), the next round starts.
+5. **Verdict.** Scores are summed, damage and healing applied, verdict broadcast. The verdict is a
+   table, an Emperor per row and a gladiator per column: each Emperor's face falls into the column
+   of the gladiator they picked (a tied Emperor's side is a coin flip, shown as a spinning coin),
+   then one line names the winner and the damage. Prompts, scores and remarks wait for the match
+   report. After ~12 s (`VERDICT_S`, or both press Next, after /compact or /clear if they want),
+   the next round starts.
 6. **Match end.** All 5 rounds always play. Nobody drops below 1 HP before round 5. After
    round 5 the player with more HP wins; equal HP is a draw.
 
@@ -100,11 +104,11 @@ Server → client
 |---|---|
 | `room:joined` | `{ code, you, token, name }` (private, to a new or rejoining player: `you` is `"p1"` or `"p2"`, and `token` is the `playerId` that `room:rejoin` needs; nobody else ever sees it) |
 | `room:state` | `{ code, players: [{ id, name, hp, connected, context }], phase, round, rounds }` (`id` is the public slot `"p1"` / `"p2"`, the same keys the verdict uses; `context` is the bar, 0 to 1) |
-| `round:start` | `{ round, kind, title, brief, maxChars, endsAt, serverNow, offering: { id, url \| task }, options, optionLabels, wildcard }` (endsAt and serverNow = server epoch ms, so the client can correct for clock skew; `options` = 4 model keys and `optionLabels` their names, round 5 only; `wildcard` = `{ id, title, rule }` or null). Sent again to a rejoining player with `you: { text, pick }` and `sealed: { p1, p2 }` added. |
+| `round:start` | `{ round, kind, title, brief, maxChars, briefEndsAt, endsAt, serverNow, offering: { id, url \| task }, options, optionLabels, wildcard }` (briefEndsAt, endsAt and serverNow = server epoch ms, so the client can correct for clock skew; the task card shows until briefEndsAt, the clock runs from there to endsAt; `options` = 4 model keys and `optionLabels` their names, round 5 only; `wildcard` = `{ id, title, rule }` or null). Sent again to a rejoining player with `you: { text, pick }` and `sealed: { p1, p2 }` added. |
 | `round:sealed` | `{ playerId, at }` |
 | `round:judging` | `{}` |
 | `round:verdict` | see below |
-| `match:end` | `{ winnerId, reason: "hp" \| "yield" \| "disconnect", final: [{ id, hp }] }` (winnerId null = draw) |
+| `match:end` | `{ winnerId, reason: "hp" \| "yield" \| "disconnect", final: [{ id, hp }], history }` (winnerId null = draw; `history` = every round's verdict payload plus `title` and `task`, for the "Acta Ludorum" report) |
 | `error` | `{ message }` |
 
 `round:verdict` payload:
@@ -128,6 +132,10 @@ Server → client
   ]
 }
 ```
+
+Each entry in `emperors` also has `pick` (the column the face falls into: the vote, or a coin flip
+when the vote is `tie`; null for an abstainer) and `coin` (true when a coin decided). The coin is
+display only: damage uses the totals and the crit uses the real votes.
 
 Extra verdict fields: `dmg` (`{ p1, p2 }`, the HP each player lost; `damage` is the larger one and
 `loser` the player who lost more, or null when equal), `forfeit` (`"p1"` or `"p2"`, only when a

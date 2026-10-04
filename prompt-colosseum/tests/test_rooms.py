@@ -248,7 +248,7 @@ def test_timeout_submits_the_last_draft():
     room, clock, out = start(judge=judge)
     room.draft("p1", "a half-written prompt")
     room.draft("p1", "a half-written prompt, now longer")
-    clock.advance(59)
+    clock.advance(rooms.BRIEF_S + 59)
     assert room.phase == "writing"
     clock.advance(1)
     assert judge.calls[0]["p1"] == "a half-written prompt, now longer" and judge.calls[0]["p2"] == ""
@@ -292,7 +292,7 @@ def test_wildcards_only_in_rounds_2_to_4_and_clepsydra_halves_time():
     seal_both(room)
     clock.advance(rooms.VERDICT_S)
     p = out.last("round:start")
-    assert p["wildcard"]["id"] == "clepsydra" and p["endsAt"] - p["serverNow"] == 30_000
+    assert p["wildcard"]["id"] == "clepsydra" and p["endsAt"] - p["briefEndsAt"] == 30_000
     seal_both(room)
     assert judge.calls[1]["wildcard"]["id"] == "clepsydra"  # the judges are told the twist
     to_round(room, clock, 5)
@@ -429,7 +429,7 @@ def test_choice_round_rules():
     room.choose("p1", correct_card(room))                          # a second pick is ignored
     assert room.players["p1"].pick == bad
     assert len(out.of("round:sealed")) - before == 1
-    clock.advance(15)                                              # p2 never answers: the hourglass ends it
+    clock.advance(rooms.BRIEF_S + 15)                              # p2 never answers: the hourglass ends it
     v = out.last("round:verdict")
     assert v["picks"] == {"p1": bad, "p2": None} and v["dmg"] == {"p1": 0, "p2": 0} and v["correct"] == []
 
@@ -494,7 +494,8 @@ def test_yield_ends_the_match_at_once():
     room, clock, out = start()
     room.yield_("p1")
     assert out.last("match:end") == {"winnerId": "p2", "reason": "yield",
-                                     "final": [{"id": "p1", "hp": 100}, {"id": "p2", "hp": 100}]}
+                                     "final": [{"id": "p1", "hp": 100}, {"id": "p2", "hp": 100}],
+                                     "history": []}
     clock.advance(300)                                             # the round's timers do nothing now
     assert len(out.of("match:end")) == 1 and not out.of("round:verdict")
 
@@ -575,3 +576,44 @@ if __name__ == "__main__":
         if name.startswith("test_"):
             fn()
             print("ok", name)
+
+
+# ---- presentation: task card, coin flips, the match report -------------------------------
+
+def test_the_task_card_comes_before_the_clock():
+    judge = Judge()
+    room, clock, out = start(judge=judge)
+    p = out.last("round:start")
+    assert p["briefEndsAt"] - p["serverNow"] == rooms.BRIEF_S * 1000
+    assert p["endsAt"] - p["briefEndsAt"] == 60_000                 # the full writing time is kept
+    clock.advance(rooms.BRIEF_S + 59)
+    assert room.phase == "writing"
+    clock.advance(1)
+    assert judge.calls                                              # the clock ran out: judged
+
+
+def test_a_tied_emperor_flips_a_coin_and_every_face_has_a_side():
+    def emp(i, vote):
+        return {"id": i, "name": i, "model": "stub", "p1": 7, "p2": 7, "vote": vote, "remark": "hm"}
+    mixed = {"emperors": [emp("a", "p1"), emp("b", "tie"), emp("c", None)], "totals": {"p1": 21, "p2": 14},
+             "unanimous": False, "flagged": {"p1": False, "p2": False}, "sweep": {"p1": False, "p2": False}}
+    room, clock, out = start(judge=Judge(mixed))
+    seal_both(room)
+    a, b, c = out.last("round:verdict")["emperors"]
+    assert (a["pick"], a["coin"]) == ("p1", False)                  # a clear vote is the pick
+    assert b["pick"] in rooms.SLOTS and b["coin"] is True and b["vote"] == "tie"   # the vote stays honest
+    assert (c["pick"], c["coin"]) == (None, False)                  # an abstainer has no face to drop
+
+
+def test_match_end_carries_the_report():
+    room, clock, out = start()
+    to_round(room, clock, 5)
+    room.choose("p1", room.options[0])
+    room.choose("p2", room.options[0])
+    clock.advance(rooms.VERDICT_S)
+    history = out.last("match:end")["history"]
+    assert [h["round"] for h in history] == [1, 2, 3, 4, 5]
+    first = history[0]
+    assert first["title"] == rounds.ROUNDS[0]["title"] and first["prompts"] == {"p1": "alpha", "p2": "beta"}
+    assert first["emperors"] and {"p1", "p2", "remark"} <= set(first["emperors"][0])
+    assert "dmg" in first and "heal" in first

@@ -1,8 +1,10 @@
 """Room tests, on a manual clock. Run with pytest, or without it: python3.11 tests/test_rooms.py
 (needs the venv: .venv/bin/python tests/test_rooms.py)"""
+import io
 import json
 import sys
 import tempfile
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -549,6 +551,24 @@ def test_socket_flow_privacy_and_rejoin():
     assert "room:joined" in again and "round:verdict" in again
     a2.emit("room:rejoin", {"code": code, "playerId": "wrong"})
     assert "error" in [m["name"] for m in a2.get_received()]
+
+
+def test_socket_drops_and_rejoins_are_logged():
+    app = create_app(clock=ManualClock(), judge=Judge())
+    a = app.socketio.test_client(app)
+    a.emit("room:create", {"name": "Ann"})
+    joined = received(a, "room:joined")[0]
+    out = io.StringIO()
+    with redirect_stdout(out):
+        a.disconnect()
+        a2 = app.socketio.test_client(app)
+        a2.emit("room:rejoin", {"code": joined["code"], "playerId": joined["token"]})
+        a2.emit("room:rejoin", {"code": joined["code"], "playerId": "wrong"})
+        a2.emit("room:rejoin", {"code": "ZZZZ", "playerId": "x"})
+    log = out.getvalue()
+    assert "[sock] room %s p1 disconnected" % joined["code"] in log and "socket lived" in log
+    assert "[sock] room %s p1 rejoined after" % joined["code"] in log
+    assert log.count("rejoin refused") == 2 and "the room is gone" in log
 
 
 def test_socket_errors_are_polite():

@@ -3,7 +3,9 @@ Play a whole match against a running server with two bots: the check to run afte
 
     .venv/bin/python scripts/smoke.py [URL]          (default http://localhost:5001)
 
-Both bots seal at once and press Next, so a match takes seconds, not minutes. If the server has
+Both bots seal at once and press Next, so a match takes seconds, not minutes. Like the browser
+client they rejoin their room if the connection drops and comes back; the report says how often
+that happened and why, because a flaky connection is worth knowing about on a real host. If the server has
 JUDGES=live this uses the real judges (a handful of API calls). Exits 0 only if all five verdicts
 and a match:end arrive over a websocket and the server sent no error.
 Needs the dev extras: .venv/bin/pip install -r requirements-dev.txt
@@ -21,16 +23,27 @@ class Bot:
     def __init__(self, name, text, pick, host):
         self.name, self.text, self.pick, self.host = name, text, pick, host
         self.sio = socketio.Client()
-        self.code, self.started, self.end = None, False, None
+        self.code, self.token, self.started, self.end = None, None, False, None
         self.verdicts, self.errors, self.opened, self.took = [], [], {}, {}
+        self.drops = []     # (seconds into the match, reason) for every lost connection
+        self.t0 = time.time()
         self.done = threading.Event()
-        for event, handler in (("room:joined", self.on_joined), ("room:state", self.on_state),
+        for event, handler in (("connect", self.on_connect), ("disconnect", self.on_disconnect),
+                               ("room:joined", self.on_joined), ("room:state", self.on_state),
                                ("round:start", self.on_round), ("round:verdict", self.on_verdict),
                                ("match:end", self.on_end), ("error", lambda e: self.errors.append(e["message"]))):
             self.sio.on(event, handler)
 
+    def on_connect(self):
+        if self.token:  # a reconnect: the new socket is in no room until it rejoins, as in the browser
+            self.sio.emit("room:rejoin", {"code": self.code, "playerId": self.token})
+
+    def on_disconnect(self, *reason):
+        if not self.done.is_set():
+            self.drops.append((round(time.time() - self.t0, 1), str(reason[0]) if reason else "?"))
+
     def on_joined(self, j):
-        self.code = j["code"]
+        self.code, self.token = j["code"], j["token"]
 
     def on_state(self, s):
         if self.host and s["phase"] == "lobby" and len(s["players"]) == 2 and not self.started:
@@ -45,8 +58,9 @@ class Bot:
             self.sio.emit("round:seal", {"text": self.text})
 
     def on_verdict(self, v):
-        self.verdicts.append(v)
-        self.took[v["round"]] = time.time() - self.opened.get(v["round"], time.time())
+        if v["round"] not in self.took:  # a rejoin replays the verdict: count it once
+            self.verdicts.append(v)
+            self.took[v["round"]] = time.time() - self.opened.get(v["round"], time.time())
         self.sio.emit("round:next", {})
 
     def on_end(self, m):
@@ -78,6 +92,8 @@ def main():
         who = ", ".join("%s %s:%s" % (e["name"], e["p1"], e["p2"]) for e in v["emperors"]) or "no judges"
         print("  round %d  totals %s  damage %s  hp %s  (%s)" % (v["round"], v["totals"], v["dmg"], v["hp"], who))
     print("end      %s" % ann.end)
+    for bot in (ann, bob):
+        print("drops    %s: %s" % (bot.name, ", ".join("%.1fs (%s)" % d for d in bot.drops) or "none"))
     problems = []
     if not finished:
         problems.append("the match did not finish in time")

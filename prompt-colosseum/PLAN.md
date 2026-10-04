@@ -8,9 +8,10 @@ Phases 1–2 (server side) are done: `app/rooms.py`, `app/events.py`, `app/__ini
 with `tests/test_rooms.py`. The design port is done: `templates/game.html` and `static/js/game.js`
 put the lobby, battle and verdict prototypes on one page over that protocol (fake judges played a
 full 5-round match on it in two tabs).
-Two public-domain paintings are in `static/offerings/` (`starry-night.jpg`, `great-wave.jpg`), and
-a full match has played on the real judges (`JUDGES=live`) under gunicorn. Until more pictures
-arrive, `draw()` only picks pictures that exist.
+All six pictures of the Pictvra pool are in `static/offerings/` (all public domain or CC0, from
+Wikimedia Commons; the Tetris logo is trademarked, so demo only), and a full match has played on
+the real judges (`JUDGES=live`) under gunicorn and through the ported UI in two browser tabs.
+`draw()` skips any picture that is not on disk. `app/prompts/cases/pictura.json` has five cases.
 Design refresh (2026-10-03, see `design/README.md`): a big typing sheet on the battle screen,
 Grenze Gotisch body font, comic-book effects in `design/fx.js` (Latin slams, rising ✠ glyphs, speed
 lines, shake, "Continvatvr"), a crowd in robes and hides, a Red Room lodge, and the four Emperors
@@ -27,19 +28,19 @@ and the client side of reconnect (Phase 6.3); see the (done) marks below.
 | 1 Screens | done |
 | 2 Rooms, fake judges | done |
 | 3 Real judges | done; bribe check in `judges.py` |
-| 4 Round content | code done; pictures missing (2 of 6), wildcard list not confirmed |
-| 5 Verdict and flow | done, except the persona names |
+| 4 Round content | code done; all 6 pictures in, Pictvra cases for 2 of them; wildcard list not confirmed |
+| 5 Verdict and flow | done |
 | 6 Polish | reconnect done; judging animation basic; sounds and practice mode not started |
 | 7 Deploy | prepared (`render.yaml`, `scripts/smoke.py`); no account yet |
 
 **Next:**
-1. 🙋 Pictures: `lighthouse.jpg`, `desert-dunes.jpg`, `game-logo-01.png`, `pixel-castle.png` are in
-   the Pictvra pool but not in `static/offerings/`, so only the two paintings come up. Grow the
-   pool to 20+.
-2. Pictvra sample cases in `app/prompts/cases/` (ludus, minister and ars have them).
-3. 🙋 Persona names: keep Avgvsta/Brvtvs/Cassia/Decimvs or rename to fit the CEO caricatures.
-4. Phase 6: a real judging animation, then sounds, then practice mode.
-5. 🙋 A Render account, then deploy and run `scripts/smoke.py` against it.
+1. 🙋 More pictures: the six in the Pictvra pool are all in `static/offerings/`. Grow the pool
+   toward 20+ (landscapes, logos, paintings, pixel art; public domain or your own).
+2. Pictvra sample cases for `lighthouse`, `desert-dunes`, `game-logo-01` and `pixel-city`
+   (the two paintings, ludus, minister and ars already have them).
+3. Phase 6: a real judging animation (the wait can reach 20 s when Gemini's free tier answers 503),
+   then sounds, then practice mode.
+4. 🙋 A Render account, then deploy and run `scripts/smoke.py` against it.
 
 Run it: `python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt`, then
 `.venv/bin/python run.py` and open http://localhost:5001 in two tabs. Tests: `.venv/bin/python -m pytest tests`.
@@ -61,17 +62,17 @@ Phases 1–2 don't need API keys, so they can start while the keys come in.
 ---
 
 ## Phase 0: Keys and probe
-- 🙋 Fill `.env` (see [API keys](#api-keys)). Each model must accept images. First run:
-  Gemini plus the local Ollama model (`gemma4:e4b`), which replaces Groq.
+- 🙋 Fill `.env` (see [API keys](#api-keys)). Each model must accept images. Live panel:
+  Gemini + Groq; the local Ollama model (`gemma4:e4b`) is an optional dev seat.
 - 🙋 Drop one test picture (any JPG) into `static/offerings/`.
 - (done) `app/judges.py` with a probe: `python3 app/judges.py` sends the test picture and two
   sample prompts to every registered judge, then prints the parsed scores and latency. The
   probe gives us Ollama's real CPU latency.
 - `JUDGES=fake|live` in `.env` picks the mode. `live` registers every provider that has a key,
   plus Ollama when `OLLAMA_MODEL` is set. pytest always uses `fake`.
-- Seats: always 4. Registered judges take them in `.env` order; fake judges fill the rest.
+- Seats: always 4. Registered judges take them in `PROVIDERS` order; fake judges fill the rest.
 
-**Done when:** at least 2 judges (Gemini + Ollama) return valid scores for an image.
+**Done when:** at least 2 judges (Gemini + Groq) return valid scores for an image. (Passed.)
 
 ## Phase 1: App skeleton and screens
 - `requirements.txt` (flask, flask-socketio, simple-websocket, httpx, python-dotenv, gunicorn,
@@ -105,11 +106,11 @@ prototypes pixel for pixel.
 
 ## Phase 3: Real judges
 - Parallel calls to every seated judge, 15 s per call, 20 s overall deadline, one retry
-  on bad JSON. A judge that still fails abstains, and the totals are scaled up to make up for it.
+  on any failure except a rate limit. A judge that still fails abstains, and the totals are scaled up to make up for it.
   If every judge abstains, the round counts as a tie.
 - The local Ollama seat is for development only. It gets its own `OLLAMA_TIMEOUT_S=90`, and the
   round deadline stretches to match while it's seated.
-- (done in `judges.py`) A/B order shuffled per judge. A provider that hits its rate limit sits out the round.
+- (done in `judges.py`) A/B order shuffled per judge. A provider that hits its rate limit sits out until its `retry-after` passes (at most 120 s, so possibly several rounds).
 - (done in `judges.py`) Injection defence: delimiters, a regex pre-check, and dropping outlier scores.
 - Judge prompts come from `rounds.py`, so each round is judged on its own criteria.
 - Choice rounds (round 5) skip the judges: the server checks the pick against the top `fit`
@@ -137,9 +138,9 @@ prototypes pixel for pixel.
 - (done) The verdict screen shows each Emperor's scores and remark (the Acta Imperatorum list
   took the place of the score plates), thumbs and happy/mad moods in the arena, the wound,
   HP bars and Victor / Victvs / Par stamps.
-- 🙋 The Emperors are now caricatures of Amodei, Altman, Zuckerberg and Musk, but the personas
-  (Avgvsta, Brvtvs, Cassia, Decimvs in `judges.py`, `JUDGES.md` and the lobby) still have the
-  old names. Rename them or keep them.
+- (done) The personas are named after the caricatures, left to right: Amodei, Altmanvs, Zvckervs,
+  Mvscvs (`judges.py`, `prompts/personas/`). Amodei keeps the precise temperament, Altmanvs the
+  mystic, Zvckervs the scholar, Mvscvs the blunt soldier.
 - (done) Both prompts side by side, a context bar under each player, and `/compact` and `/clear`
   buttons between rounds.
 - (done) Next round, the match-end screen and a two-click Yield.
@@ -198,7 +199,8 @@ Editing `app/rounds.py` directly works too.
 - **Where:** `prompt-colosseum/static/offerings/`. Tell us each picture's category, or add it
   to the picture round's pool in `rounds.py`.
 - **How many:** 5–10 per category (landscape, game logo, painting, pixel art), 20+ in total.
-- **Format:** JPG or PNG at any size. They get resized to 1024 px on the long side.
+- **Format:** JPG or PNG, resized by you to ~1024 px on the long side (`sips -Z 1024 file.jpg`);
+  the game sends the file to the judges as it is.
 - **Shape:** landscape 4:3 fits the CRT. Other shapes get cropped to the centre.
 - **Names:** lowercase with dashes, e.g. `desert-dunes.jpg`.
 - **Rights:** your own photos, public domain or CC0 (Wikimedia Commons, The Met Open Access),

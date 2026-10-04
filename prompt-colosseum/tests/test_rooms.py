@@ -87,7 +87,7 @@ class Wildcard(NoWildcards):
 def result(t1, t2, unanimous=False, sweep=(False, False), flagged=(False, False)):
     vote = "p1" if t1 > t2 else "p2" if t2 > t1 else "tie"
     emps = [{"id": i, "name": n, "model": "stub", "p1": t1 // 2, "p2": t2 // 2, "vote": vote, "remark": "ok"}
-            for i, n in (("augusta", "Avgvsta"), ("brutus", "Brvtvs"))]
+            for i, n in (("amodei", "Amodei"), ("altman", "Altmanvs"))]
     return {"emperors": emps, "totals": {"p1": t1, "p2": t2}, "unanimous": unanimous,
             "flagged": dict(zip(("p1", "p2"), flagged)), "sweep": dict(zip(("p1", "p2"), sweep))}
 

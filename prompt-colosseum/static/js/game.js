@@ -57,18 +57,10 @@
   });
 
   // ---- HUD: names, HP bars, context bars ----
-  const COLORS = { p1: ["#B6FF4A", "rgba(182,255,74,0.13)", "-16deg"], p2: ["#FF4FB0", "rgba(255,79,176,0.13)", "16deg"] };
-  const hpBar = (s, hp, before) => {
-    const [on, off, skew] = COLORS[s];
+  const hpBar = (s, hp, before) => {   // looks: .hp in theme.css
     const full = Math.ceil(hp / 5), lost = Math.max(0, Math.ceil(before / 5) - full);
-    const seg = kind => {
-      const d = el("div", null, "width: 17px; height: 20px; transform: skewX(" + skew + "); " +
-        (kind === "on" ? "background: " + on + "; box-shadow: 0 0 7px " + on
-          : kind === "lost" ? "background: #F5E6C8; box-shadow: 0 0 8px #FF3B30" : "background: " + off + "; box-shadow: none"));
-      if (kind === "lost") d.className = "blink-fast";
-      return d;
-    };
-    const kinds = [...Array(full).fill("on"), ...Array(lost).fill("lost"), ...Array(Math.max(0, 20 - full - lost)).fill("off")];
+    const seg = kind => { const d = document.createElement("i"); if (kind) d.className = kind; return d; };
+    const kinds = [...Array(full).fill("on"), ...Array(lost).fill("lost"), ...Array(Math.max(0, 20 - full - lost)).fill("")];
     $(s + "-bar").replaceChildren(...(s === "p1" ? kinds : kinds.reverse()).map(seg));
     $(s + "-hp").textContent = String(hp).padStart(3, "0");
   };
@@ -135,7 +127,7 @@
   const left = () => Math.max(0, Math.ceil((endsAt - (Date.now() + skew)) / 1000));
   const paintTimer = () => {
     const t = left(), timer = $("timer");
-    timer.textContent = "00:" + String(t).padStart(2, "0");
+    timer.textContent = String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0");
     timer.classList.toggle("fx-hot", t <= 10);
     if (t !== lastSec) {
       if (t === 10 && lastSec > 10) { FX.lines(900, { color: "rgba(176,76,255,0.7)" }); FX.slam("Tempvs Fvgit", { sub: "10 SECONDS", color: "#C98CFF", size: 110 }); }

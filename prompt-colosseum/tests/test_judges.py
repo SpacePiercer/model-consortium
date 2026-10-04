@@ -129,7 +129,7 @@ def test_live_seats_fill_with_fakes():
 def test_probe_and_calibrate_see_real_judges_only():
     env = {"GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-x"}
     with patch.dict("os.environ", env, clear=True):
-        assert [(s.id, s.judge.provider) for s in judges.real_seats()] == [("augusta", "gemini")]
+        assert [(s.id, s.judge.provider) for s in judges.real_seats()] == [("amodei", "gemini")]
     with patch.dict("os.environ", {}, clear=True):
         assert judges.real_seats() == []  # nothing registered: no fakes to pad the result
 

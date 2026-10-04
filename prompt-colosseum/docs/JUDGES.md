@@ -6,29 +6,30 @@ often; check each provider's current model list and limits before wiring a model
 
 `JUDGES=fake|live` in `.env` picks the mode. `fake` (the default, and always in pytest) seats
 judges that return random scores from a seeded RNG. `live` registers every provider that has a
-key, plus Ollama when `OLLAMA_MODEL` is set, in `.env` order (at most 4); personas go to seats
+key, plus Ollama when `OLLAMA_MODEL` is set, in `PROVIDERS` order (gemini, groq, cloudflare,
+openrouter, openai, anthropic, then Ollama; at most 4); personas go to seats
 in that order. Seats left empty are filled with random-score fake judges, so the panel is always 4.
 
 | Seat | Persona | Provider | OpenAI-compatible base URL (verify) |
 |---|---|---|---|
-| augusta | Avgvsta | Google AI Studio (Gemini Flash) | `https://generativelanguage.googleapis.com/v1beta/openai/` |
-| brutus | Brvtvs | Groq (Llama 4 Scout, vision) | `https://api.groq.com/openai/v1` |
-| cassia | Cassia | Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1` |
-| decimus | Decimvs | OpenRouter (a `:free` vision model, with fallbacks) | `https://openrouter.ai/api/v1` |
+| amodei | Amodei | Google AI Studio (Gemini Flash) | `https://generativelanguage.googleapis.com/v1beta/openai/` |
+| altman | Altmanvs | Groq (a vision model; `render.yaml` sets `GROQ_MODEL`) | `https://api.groq.com/openai/v1` |
+| zuckerberg | Zvckervs | Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1` |
+| musk | Mvscvs | OpenRouter (a `:free` vision model, with fallbacks) | `https://openrouter.ai/api/v1` |
 | (next) | next free persona | OpenAI (paid) | `https://api.openai.com/v1` |
 | (next) | next free persona | Anthropic (paid, OpenAI-compatible beta) | `https://api.anthropic.com/v1` |
-| (dev) | next free persona | Ollama, local (`gemma4:e4b`), replaces Groq for now | `http://localhost:11434/v1` |
+| (dev) | next free persona | Ollama, local (`gemma4:e4b`), optional dev seat | `http://localhost:11434/v1` |
 
 Personas are positional: the table shows the default order, but each registered provider simply
-takes the next persona. With only Gemini and OpenRouter keyed, OpenRouter sits as Brvtvs. To pick
+takes the next persona. With only Gemini and OpenRouter keyed, OpenRouter sits as Altmanvs. To pick
 who sits when more than 4 are keyed, leave the others' keys out of `.env`.
 
 All of them speak the OpenAI chat-completions format, so one client with a swappable `base_url`,
 `api_key` and `model` covers them. Put the model IDs in `.env`, not in code.
 
-First run: Gemini + Ollama. The Ollama seat runs on CPU (20–60 s per verdict, to be measured by
-the probe), so it is for development only and never seated in the live demo. Before the demo, add
-one paid provider (OpenAI or Anthropic) as the second live seat.
+Live panel: Gemini + Groq (what `render.yaml` deploys; Phase 0 passed on them), with a paid
+provider (OpenAI or Anthropic) as the backup seat. The Ollama seat runs on CPU (20–60 s per
+verdict), so it is an optional development seat and never seated in the live demo.
 
 Notes:
 - Gemini's free tier may use your inputs to improve Google's models and excludes commercial use.
@@ -37,7 +38,8 @@ Notes:
 
 ## Request
 
-- `temperature: 0.2`, `max_tokens: 400`, JSON output (`response_format: {"type": "json_object"}`
+- `temperature: 0.2`, `max_tokens: 400` (Gemini: 2048 plus `reasoning_effort: low`, because its
+  thinking spends the budget before the answer), JSON output (`response_format: {"type": "json_object"}`
   where supported; otherwise rely on the schema in the prompt and parse defensively).
 - Randomize which player is A and which is B, independently per Emperor, to cancel position bias.
   Map back to p1/p2 after parsing.
@@ -92,11 +94,7 @@ Rounds 2-4 add a hidden checklist (see User message). Their schema gets one more
 testimony, `"checklist": 0-N`, the number of checklist items it covers, and the prompt tells the
 Emperor never to reveal the checklist.
 
-`{PERSONA}` flavour lines (optional, keep the rubric identical):
-- Avgvsta: precise and cold; values composition and light.
-- Brvtvs: blunt soldier; values the obvious subject being right.
-- Cassia: mystic; values mood and colour.
-- Decimvs: old scholar; values medium and technique (photo vs painting vs render).
+The personas' temperaments live in `app/prompts/personas/*.md` (one file per Emperor).
 
 ### User message
 
@@ -139,16 +137,18 @@ offering. Strip `<<<` and `>>>` from player text before inserting, and truncate 
    (`BRIBE_CAP`), no checklist sweep, and shown in the verdict as "the Emperors saw through
    your bribe".
 3. Outlier check: if one Emperor's score for a testimony differs from the panel median by ≥ 6,
-   drop that Emperor for the round.
+   drop that Emperor for the round. It needs at least 3 real (non-fake) judges; fake fillers
+   neither count toward the median nor get dropped, so a 2-judge live panel has no outlier check.
 
 ## Environment
 
-`.env.example` is the source of truth; this is the same list with notes.
+`.env.example` is the source of truth; this is the same list with notes. `FAKE_SEED` and
+`JUDGE_MAX_TOKENS` are optional and normally left unset.
 
 ```
 FLASK_SECRET_KEY=change-me
 JUDGES=fake               # fake | live
-FAKE_SEED=0               # seed for the fake judges
+# FAKE_SEED=0             # seed for the fake judges (default 0)
 GEMINI_API_KEY=
 GEMINI_MODEL=
 GROQ_API_KEY=
@@ -165,5 +165,5 @@ ANTHROPIC_MODEL=
 OLLAMA_MODEL=             # e.g. gemma4:e4b; dev only
 OLLAMA_TIMEOUT_S=90
 JUDGE_TIMEOUT_S=15
-JUDGE_MAX_TOKENS=400
+# JUDGE_MAX_TOKENS=        # overrides every provider's limit (incl. Gemini's 2048); leave unset
 ```
